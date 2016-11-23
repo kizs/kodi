@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<settings>
+    <category label="Bejelentkezés">
+        <setting id="felhasznalonev" type="text" label="Felhasználónév" default=""/>
+        <setting id="jelszo" type="text" option="hidden" label="Jelszó" default=""/>
+        <setting id="torrentPath" type="folder" option="writeable" label="Ideiglenes fájlok helye (a könyvtár teljes tartalma kitörlődik!)" default=""/>
+        <setting id="torrentFullDownload" type="bool" option="hidden" label="Várja meg a letöltés végét a lejátszással" default="true"/>
+		<setting id="elonySzazalek" type="slider" label="Ennyi % előnyt adjon a lejátszó a letöltőnek" range="1,99" default="20" option="int"/>
+		<setting id="tmptorlesido" type="slider" label ="Ennyi napig őrizze meg az ideiglenes állományokat" default="1" range="1,365" option="int"/>
+	</category>
+	<category label="Transmission">
+		<setting id="send_to_transmission" type="bool" label="A torrent fájlt küldje át a Transmission-nak is letöltésre" default="false" />
+	    <setting id="transmission_url" type="text" label="Transmission rpc url" default="http://xxx.xxx.xxx.xxx:9091/transmission/rpc" />
+	    <setting id="transmission_username" type="text" label="Felhasználónév (ha nincs hagyd üresen)" default="" />
+		<setting id="transmission_password" type="text" option="hidden" label="Jelszó (ha nincs hagyd üresen)"	default="" />
+		<setting id="transmission_paused" type="bool" label="Csak adja hozzá, de ne indítsa el a letöltést" default="true" />
+	</category>
+	<category label="uTorrent">
+		<setting id="utorrent_send" type="bool" label="A torrent fájlt küldje át a uTorrentnek-nek is letöltésre" default="false" />
+	    <setting id="utorrent_url" type="text" label="uTorrent web gui url" default="http://xxx.xxx.xxx.xxx:yyyy/gui/" />
+	    <setting id="utorrent_username" type="text" label="Felhasználónév" default="" />
+		<setting id="utorrent_password" type="text" option="hidden" label="Jelszó"	default="" />
+	</category>
+</settings>

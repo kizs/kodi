@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addon id="service.kizstorrent" name="kizstorrent" version="0.3" provider-name="KIZS">
+  <requires>
+    <import addon="xbmc.python" version="2.1.0"/>
+    <import addon="script.module.libtorrent"/>
+  </requires>
+  <extension point="xbmc.python.module" library="kizstorrent" />
+  <extension point="xbmc.service" library="kizstorrent/kizstorrent.py" start="login" />
+  <extension point="xbmc.addon.metadata">
+    <platform>all</platform>
+    <summary>Torrent szolgáltatás HunCoreTv és BitHumenTV kiegészítőkhöz</summary>
+    <description>Háttérben futó torrent szolgáltatás HunCoreTv és BitHumenTV kiegészítőkhöz.</description>
+  </extension>
+</addon>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<settings>
+    <category label="animeaddicts.hu bejelentkezés">
+        <setting id="seed" type="bool" label="Letöltés után visszaosztás" default="true"/>
+        <setting id="tmpdirNCTV" type="folder" option="writeable" label="NCTV ideiglenes fájlok helye" default=""/>
+        <setting id="tmpdirBHTV" type="folder" option="writeable" label="BHTV ideiglenes fájlok helye" default=""/>
+    </category>
+</settings>
