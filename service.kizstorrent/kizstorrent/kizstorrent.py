@@ -19,14 +19,15 @@ except NameError:
     torrentSession.listen_on(6881, 6889)
 
 addon = xbmcaddon.Addon(id='service.kizstorrent')
-tmpdir = addon.getSetting('tmpdirBHTV')
+tmpdir = addon.getSetting('tmpdir')
+tmpTorrentdir = addon.getSetting('tmptorrentdir')
 
 try:
     torrent_pool
 except:
     torrent_pool = dict()
     
-if (tmpdir == ""):
+if ((tmpdir == "") or (tmpTorrentdir == "")):
     dialog = xbmcgui.Dialog()
     dialog.ok("Hiba!", "KizsTorrent: Nem végezted el a beállításokat!", "", "")
     addon.openSettings()
@@ -67,9 +68,9 @@ def play_torrenturl(fileToPlay, video_url, videoname, thumbnail, tmptorles, elon
             nowDate = datetime.datetime.now()
             row = c.execute('SELECT count(*) FROM torrents where torrentInfo=?', (buffer(blob), )).fetchone()
             if (row[0] == 0):
-                c.execute('INSERT INTO torrents(torrentInfo, file_to_play, client_name, download_dir, savetime, download_percent, seedable, delete_date, mark_for_delete) VALUES(?,?,?,?,?,?,?,?,?)', (buffer(blob), fileToPlay, 'BHTV', tmpdir, nowDate, 0, 1, nowDate + datetime.timedelta(days=int(tmptorles)), 0))
+                c.execute('INSERT INTO torrents(torrentInfo, file_to_play, client_name, download_dir, savetime, download_percent, seedable, delete_date, mark_for_delete) VALUES(?,?,?,?,?,?,?,?,?)', (buffer(blob), fileToPlay, 'BHTV', tmpTorrentdir, nowDate, 0, 1, nowDate + datetime.timedelta(days=int(tmptorles)), 0))
             dbConn.commit()
-            std = start_torrent_download(c.lastrowid, tmpdir, buffer(blob), fileToPlay, 0)
+            std = start_torrent_download(c.lastrowid, tmpTorrentdir, buffer(blob), fileToPlay, 0)
             torrentHandler = std[1]
             dbOk = True
         except:
@@ -89,7 +90,7 @@ def play_torrenturl(fileToPlay, video_url, videoname, thumbnail, tmptorles, elon
             progress.update(download_percent, 'Download rate: ' + str(s.download_rate / 1000) + ' kB/s Peers: ' + str(s.num_peers) + ' State: ' + state_str[s.state], str(int(s.progress * 100)) + '%')
    
             if ((download_percent >= elonySzazalek) & (torrentFullDownload == 'false')):
-                play_torrent(videoname, thumbnail, tmpdir + fileToPlay)
+                play_torrent(videoname, thumbnail, tmpTorrentdir + fileToPlay)
                 progress.close()
                 break
                 #elonySzazalek = min(99, elonySzazalek + 2)
@@ -105,7 +106,7 @@ def play_torrenturl(fileToPlay, video_url, videoname, thumbnail, tmptorles, elon
                 sys.stderr.write(str(sys.exc_info()[x]))
     
     if ((torrentFullDownload == 'true') and (download_percent >= 99)):
-        play_torrent(videoname, thumbnail, tmpdir + fileToPlay)
+        play_torrent(videoname, thumbnail, tmpTorrentdir + fileToPlay)
        
     return
 
