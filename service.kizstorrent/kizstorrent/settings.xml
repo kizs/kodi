@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <settings>
-    <category label="animeaddicts.hu bejelentkezés">
-        <setting id="seed" type="bool" label="Letöltés után visszaosztás" default="true"/>
-        <setting id="tmpdir" type="folder" option="writeable" label="Ideiglenes fájlok helye" default=""/>
-        <setting id="tmptorrentdir" type="folder" option="writeable" label="Letöltött filmek helye" default=""/>
-    </category>
+    <category label="Torrent-szerviz beállítások">
+		<setting id="seed" type="bool" label="Letöltés után visszaosztás" default="true"/>
+		<setting id="tmpdir" type="folder" option="writeable" label="Ideiglenes fájlok helye" default=""/>
+		<setting id="tmptorrentdir" type="folder" option="writeable" label="Letöltött filmek helye" default=""/>
+		<setting id="speedLimit" type="bool" label="Sebesség korlátozás" default="true" />
+		<setting id="downloadLimit" type="number" default="2500" range="1," option="int" label="Letöltési korlát (KB/s)" visible="eq(-1,true)" />
+		<setting id="uploadLimit" type="number" default="500" range="1," option="int" label="Feltöltési korlát (KB/s)" visible="eq(-2,true)" />
+  </category>
 </settings>

@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.video.bithumentv" name="BitHUmenTV" version="2.0.1" provider-name="KIZS">
+<addon id="plugin.video.bithumentv" name="BitHUmenTV" version="2.0.2" provider-name="KIZS">
 	<requires>
 		<import addon="xbmc.python" version="2.1.0"/>
 		<import addon="script.module.requests"/>
 		<import addon="script.module.libtorrent"/>
-		<import addon="service.kizstorrent" version="0.1"/>
+		<import addon="service.kizstorrent" version="0.4.0"/>
 	</requires>
 	<extension point="xbmc.python.pluginsource" library="default.py">
 		<provides>video</provides>

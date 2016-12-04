@@ -27,7 +27,7 @@ from kizstorrent import play_torrenturl
 from python_libtorrent import get_libtorrent
 import xbmc
 
-
+torrentAddon = xbmcaddon.Addon(id='service.kizstorrent')
 addon = xbmcaddon.Addon(id='plugin.video.huncoretv')
 thisAddonDir = xbmc.translatePath(addon.getAddonInfo('path')).decode('utf-8')
 sys.path.append(os.path.join(thisAddonDir, 'resources', 'lib'))
@@ -278,6 +278,10 @@ def build_main_directory():
     li = xbmcgui.ListItem('Beállítások')
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=False)
 
+    localurl = sys.argv[0]+'?mode=openSetupTorrent'
+    li = xbmcgui.ListItem('Torrent beállítások')
+    xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=False)
+
     xbmcplugin.endOfDirectory(addon_handle)
     return
 
@@ -473,3 +477,5 @@ elif mode[0] == 'listTorrent':
     build_torrent_sub_directory(movieURL[0], videoName[0])
 elif mode[0] == 'openSetup':
     addon.openSettings()
+elif mode[0] == 'openSetupTorrent':
+    torrentAddon.openSettings()

@@ -21,6 +21,9 @@ except NameError:
 addon = xbmcaddon.Addon(id='service.kizstorrent')
 tmpdir = addon.getSetting('tmpdir')
 tmpTorrentdir = addon.getSetting('tmptorrentdir')
+speedLimit = addon.getSetting('speedLimit')
+downloadLimit = addon.getSetting('downloadLimit')
+uploadLimit = addon.getSetting('uploadLimit')
 
 try:
     torrent_pool
@@ -149,6 +152,10 @@ def start_torrent_download(torrent_id, download_dir, torrentInfo, file_to_play, 
                 torrentHandler.piece_priority(i, 1)
     else:
         ujvagyregi = ''
+        
+    if (speedLimit == 'true'):
+        torrentHandler.set_download_limit(downloadLimit)
+        torrentHandler.set_download_limit(uploadLimit)
                 
     s = torrentHandler.status()
     sys.stderr.write(ujvagyregi + 'torrent download: ' + file_to_play + ' Download rate: ' + str(s.download_rate / 1000) + ' kB/s Peers: ' + str(s.num_peers) + ' State: ' + state_str[s.state] + ', ' + str(int(s.progress * 100)) + '%')
@@ -235,6 +242,12 @@ def torrent(seed):
     return
 
 if __name__ == '__main__':
+    global tmpdir
+    global tmpTorrentdir
+    global speedLimit
+    global downloadLimit
+    global uploadLimit
+
     monitor = xbmc.Monitor()
 
     counter = 0
@@ -245,6 +258,11 @@ if __name__ == '__main__':
         counter = counter + 1
         if (counter >= 60) :
             seed = addon.getSetting('seed')
+            tmpdir = addon.getSetting('tmpdir')
+            tmpTorrentdir = addon.getSetting('tmptorrentdir')
+            speedLimit = addon.getSetting('speedLimit')
+            downloadLimit = addon.getSetting('downloadLimit')
+            uploadLimit = addon.getSetting('uploadLimit')
             torrent(seed)
             counter = 0
         
