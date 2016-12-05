@@ -24,6 +24,7 @@ tmpTorrentdir = addon.getSetting('tmptorrentdir')
 speedLimit = addon.getSetting('speedLimit')
 downloadLimit = addon.getSetting('downloadLimit')
 uploadLimit = addon.getSetting('uploadLimit')
+maxConnections = addon.getSetting('maxConnections')
 
 try:
     torrent_pool
@@ -32,9 +33,8 @@ except:
     
 if ((tmpdir == "") or (tmpTorrentdir == "")):
     dialog = xbmcgui.Dialog()
-    dialog.ok("Hiba!", "KizsTorrent: Nem végezted el a beállításokat!", "", "")
+    dialog.ok("Hiba!", "KizsTorrent: Nem végezted el a beállításokat!", "Beállítások után indítsd újra a Kodi-t!", "")
     addon.openSettings()
-    sys.exit()
     
 dbConn = sqlite3.connect(tmpdir + 'torrents.db' )
 dbConn.isolation_level = 'DEFERRED'
@@ -47,7 +47,7 @@ def play_torrent(videoname, thumbnail, filePath):
     xbmc.Player().play(filePath, videoitem)
     return
 
-def play_torrenturl(fileToPlay, video_url, videoname, thumbnail, tmptorles, elonySzazalek, torrentFullDownload):
+def play_torrenturl(fileToPlay, video_url, videoname, thumbnail, tmptorles, elonySzazalek, torrentFullDownload, blob):
     global dbConn
     global state_str
     
@@ -65,9 +65,9 @@ def play_torrenturl(fileToPlay, video_url, videoname, thumbnail, tmptorles, elon
                 c.execute('CREATE TABLE torrents(torrents_id INTEGER PRIMARY KEY AUTOINCREMENT, torrentInfo BLOB, file_to_play TEXT, donwload_info TEXT, client_name TEXT, download_dir TEXT, savetime TIMESTAMP, download_percent INTEGER, seedable INTEGER, delete_date TIMESTAMP, mark_for_delete INTEGER)')
                 sys.stderr.write('CREATE TABLE torrents(torrents_id INTEGER PRIMARY KEY AUTOINCREMENT, torrentInfo BLOB, file_to_play TEXT, client_name TEXT, download_dir TEXT, savetime TIMESTAMP, download_percent INTEGER, seedable INTEGER, delete_date TIMESTAMP, mark_for_delete INTEGER)')
         
-            f = open(tmpdir + 'mytorrent.torrent', 'rb')
-            blob = f.read()
-            f.close()
+            #f = open(tmpdir + 'mytorrent.torrent', 'rb')
+            #blob = f.read()
+            #f.close()
             nowDate = datetime.datetime.now()
             row = c.execute('SELECT count(*) FROM torrents where torrentInfo=?', (buffer(blob), )).fetchone()
             if (row[0] == 0):
@@ -98,7 +98,9 @@ def play_torrenturl(fileToPlay, video_url, videoname, thumbnail, tmptorles, elon
                 break
                 #elonySzazalek = min(99, elonySzazalek + 2)
 
-            #if (xbmc.Player().isPlaying()):
+            if (progress.iscanceled()):
+                progress.close()
+                break
                 
             if download_percent>=100:
                 break
@@ -154,8 +156,13 @@ def start_torrent_download(torrent_id, download_dir, torrentInfo, file_to_play, 
         ujvagyregi = ''
         
     if (speedLimit == 'true'):
-        torrentHandler.set_download_limit(downloadLimit)
-        torrentHandler.set_download_limit(uploadLimit)
+        if (int(maxConnections) > 2):
+            torrentHandler.set_max_connections(int(maxConnections))
+        else:
+            torrentHandler.set_max_connections(int(2))
+            
+        torrentHandler.set_download_limit(int(downloadLimit) * 1024)
+        torrentHandler.set_upload_limit(int(uploadLimit) * 1024)
                 
     s = torrentHandler.status()
     sys.stderr.write(ujvagyregi + 'torrent download: ' + file_to_play + ' Download rate: ' + str(s.download_rate / 1000) + ' kB/s Peers: ' + str(s.num_peers) + ' State: ' + state_str[s.state] + ', ' + str(int(s.progress * 100)) + '%')
@@ -242,12 +249,6 @@ def torrent(seed):
     return
 
 if __name__ == '__main__':
-    global tmpdir
-    global tmpTorrentdir
-    global speedLimit
-    global downloadLimit
-    global uploadLimit
-
     monitor = xbmc.Monitor()
 
     counter = 0
@@ -256,13 +257,14 @@ if __name__ == '__main__':
             break
         
         counter = counter + 1
-        if (counter >= 60) :
+        if ((counter >= 60) and (tmpdir <> "") and (tmpTorrentdir <> "")) :
             seed = addon.getSetting('seed')
             tmpdir = addon.getSetting('tmpdir')
             tmpTorrentdir = addon.getSetting('tmptorrentdir')
             speedLimit = addon.getSetting('speedLimit')
             downloadLimit = addon.getSetting('downloadLimit')
             uploadLimit = addon.getSetting('uploadLimit')
+            maxConnections = addon.getSetting('maxConnections')
             torrent(seed)
             counter = 0
         

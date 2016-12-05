@@ -472,7 +472,10 @@ elif mode[0] == 'changeDir':
     build_sub_directory(subDir, tag)
 elif mode[0] == 'playTorrent':
     send_to_downloader()
-    play_torrenturl(fileToPlay[0], movieURL[0], videoName[0], None, tmptorles, elonySzazalek, torrentFullDownload)
+    f = open(torrentPath + 'mytorrent.torrent', 'rb')
+    blob = f.read()
+    f.close()
+    play_torrenturl(fileToPlay[0], movieURL[0], videoName[0], None, tmptorles, elonySzazalek, torrentFullDownload, blob)
 elif mode[0] == 'listTorrent':
     build_torrent_sub_directory(movieURL[0], videoName[0])
 elif mode[0] == 'openSetup':
