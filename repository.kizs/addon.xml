@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addon id="repository.kizs" version="1.0.1" name="KIZS repository" provider-name="KIZS">
+	<extension point="xbmc.addon.repository" name="KIZS repository">
+		<dir>
+			<info compressed="false">http://kizs.dyndns.org/addons.xml</info>
+			<checksum>http://kizs.dyndns.org/addons.xml.md5</checksum>
+			<datadir zip="true">http://kizs.dyndns.org/</datadir>
+		</dir>
+		<info compressed="false">http://kizs.dyndns.org/addons.xml</info>
+		<checksum>http://kizs.dyndns.org/addons.xml.md5</checksum>
+		<datadir zip="true">http://kizs.dyndns.org/</datadir>
+	</extension>
+	<extension point="xbmc.addon.metadata">
+		<summary>KIZS Repository</summary>
+		<description >KIZS Repository</description>
+		<platform>all</platform>
+	</extension>
+</addon>
+

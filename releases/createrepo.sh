@@ -1,0 +1,1 @@
+./create_repository.py --compressed /home/pisti/git/kodi/releases/plugin.video.bithumentv.zip /home/pisti/git/kodi/releases/plugin.video.huncoretv.zip /home/pisti/git/kodi/releases/service.kizstorrent.zip /home/pisti/git/kodi/releases/script.module.libtorrent-1.0.7b.zip /home/pisti/git/kodi/releases/plugin.video.animeaddicts.zip

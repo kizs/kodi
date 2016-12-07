@@ -7,6 +7,7 @@
         <setting id="torrentFullDownload" type="bool" option="hidden" label="Várja meg a letöltés végét a lejátszással" default="true"/>
 		<setting id="elonySzazalek" type="slider" label="Ennyi % előnyt adjon a lejátszó a letöltőnek" range="1,99" default="25" option="int" visible="eq(-1,false)" />
 		<setting id="tmptorlesido" type="slider" label ="Ennyi napig őrizze meg az ideiglenes állományokat" default="90" range="1,365" option="int"/>
+		<setting id="tmpTorrentTorlesido" type="slider" label ="Ennyi napig ossza vissza a torrentet" default="10" range="1,365" option="int"/>
 	</category>
 	<category label="Transmission">
 		<setting id="send_to_transmission" type="bool" label="A torrent fájlt küldje át a Transmission-nak is letöltésre" default="false" />

@@ -10,6 +10,6 @@ mv plugin.video.bithumentv.zip releases
 zip -r service.kizstorrent.zip service.kizstorrent
 mv service.kizstorrent.zip releases
 
-zip -r releases/plugin.video.animeaddicts-1.1.zip plugin.video.animeaddicts
+zip -r releases/plugin.video.animeaddicts.zip plugin.video.animeaddicts
 #md5sum -b plugin.video.animeaddicts-1.0.zip > plugin.video.animeaddicts-1.0.md5
 cd releases

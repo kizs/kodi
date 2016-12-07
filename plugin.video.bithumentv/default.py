@@ -47,6 +47,7 @@ jelszo = addon.getSetting('jelszo')
 torrentPath = addon.getSetting('torrentPath')
 torrentFullDownload = addon.getSetting('torrentFullDownload')
 tmptorles = addon.getSetting('tmptorlesido')
+tmpTorrentTorlesido = addon.getSetting('tmpTorrentTorlesido')
 elonySzazalek = int(addon.getSetting('elonySzazalek'))
 
 if (felhasznalo == "" or jelszo == "" or torrentPath == ""):
@@ -499,7 +500,7 @@ elif mode[0] == 'playTorrent':
     f = open(torrentPath + 'mytorrent.torrent', 'rb')
     blob = f.read()
     f.close()
-    play_torrenturl(fileToPlay[0], movieURL[0], videoName[0], None, tmptorles, elonySzazalek, torrentFullDownload, blob)
+    play_torrenturl(fileToPlay[0], movieURL[0], videoName[0], None, tmpTorrentTorlesido, elonySzazalek, torrentFullDownload, blob)
 elif mode[0] == 'listTorrent':
     build_torrent_sub_directory(movieURL[0], videoName[0])
 elif mode[0] == 'openSetup':
