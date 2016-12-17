@@ -254,31 +254,31 @@ def build_sub_directory(subDir, category):
 
     if (subDir[0] == 'Sajatlista'):
         localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Befejezett'
-        li = xbmcgui.ListItem('Befejezett', iconImage='http://animeaddicts.hu/theme/icons/ok_gray_32.png')
+        li = xbmcgui.ListItem('Befejezett', iconImage=thisAddonDir + '/resources/ok_gray_32.png')
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
 
         localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Aktualis'
-        li = xbmcgui.ListItem('Aktuális', iconImage='http://animeaddicts.hu/theme/icons/watch_48.png')
+        li = xbmcgui.ListItem('Aktuális', iconImage=thisAddonDir + '/resources/watch_48.png')
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
         
         localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Tervezett'
-        li = xbmcgui.ListItem('Tervezett', iconImage='http://animeaddicts.hu/theme/icons/towatch_48.png')
+        li = xbmcgui.ListItem('Tervezett', iconImage=thisAddonDir + '/resources/towatch_48.png')
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
         
         localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Felfuggesztett'
-        li = xbmcgui.ListItem('Felfüggesztett', iconImage='http://animeaddicts.hu/theme/icons/stalled_48.png')
+        li = xbmcgui.ListItem('Felfüggesztett', iconImage=thisAddonDir + '/resources/stalled_48.png')
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
         
         localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Dobott'
-        li = xbmcgui.ListItem('Dobott', iconImage='http://animeaddicts.hu/theme/icons/dropped_48.png')
+        li = xbmcgui.ListItem('Dobott', iconImage=thisAddonDir + '/resources/dropped_48.png')
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
         
         localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Kedvenc'
-        li = xbmcgui.ListItem('Kedvenc', iconImage='http://animeaddicts.hu/theme/icons/favourite_48.png')
+        li = xbmcgui.ListItem('Kedvenc', iconImage=thisAddonDir + '/resources/favourite_48.png')
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
         
         localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Utalt'
-        li = xbmcgui.ListItem('Utált', iconImage='http://animeaddicts.hu/theme/icons/hated_48.png')
+        li = xbmcgui.ListItem('Utált', iconImage=thisAddonDir + '/resources/hated_48.png')
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
 
         xbmcplugin.endOfDirectory(addon_handle)
