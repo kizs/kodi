@@ -188,6 +188,10 @@ def build_main_directory():
     li = xbmcgui.ListItem('Kategóriák')
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
 
+    localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista'
+    li = xbmcgui.ListItem('Saját listák')
+    xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
+
     localurl = sys.argv[0]+'?mode=changeDir&dirName=Kereses'
     li = xbmcgui.ListItem('Keresés')
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
@@ -202,6 +206,83 @@ def build_main_directory():
 
 def build_sub_directory(subDir, category):
     global dbConn
+
+    hParser = HTMLParser.HTMLParser()
+    if (subDir[0].startswith('Sajatlista_')):
+        url_content = load(baseUrl + '/news.php?news')
+        completedList = re.compile("<a href='encyclopedia.php\?mylist.(.*?).anime.saw'", re.MULTILINE|re.DOTALL).findall(url_content)
+        if (len(completedList) > 0):
+            userID = str(completedList[0])
+            
+            if (subDir[0].endswith('Befejezett')):
+                url_content = load(baseUrl + 'encyclopedia.php?mylist.' + userID + '.anime.saw')
+
+            if (subDir[0].endswith('Aktualis')):
+                url_content = load(baseUrl + 'encyclopedia.php?mylist.' + userID + '.anime.watch')
+
+            if (subDir[0].endswith('Tervezett')):
+                url_content = load(baseUrl + 'encyclopedia.php?mylist.' + userID + '.anime.towatch')
+
+            if (subDir[0].endswith('Felfuggesztett')):
+                url_content = load(baseUrl + 'encyclopedia.php?mylist.' + userID + '.anime.stalled')
+
+            if (subDir[0].endswith('Dobott')):
+                url_content = load(baseUrl + 'encyclopedia.php?mylist.' + userID + '.anime.dropped')
+
+            if (subDir[0].endswith('Kedvenc')):
+                url_content = load(baseUrl + 'encyclopedia.php?mylist.' + userID + '.anime.favourite')
+
+            if (subDir[0].endswith('Utalt')):
+                url_content = load(baseUrl + 'encyclopedia.php?mylist.' + userID + '.anime.hated')
+                
+            completedList = re.compile("<td  style='width:58px;'>.*?<a href='(.*?)'>.*?<img src='(.*?)' alt='(.*?)'", re.MULTILINE|re.DOTALL).findall(url_content)
+            for x in range(0, len(completedList)):
+                name = hParser.unescape(completedList[x][1].decode('utf-8'))
+                localurl = completedList[x][0];
+                localurl = "?mode=listMovieParts&" + urllib.urlencode({'urlToPlay' : localurl})
+                localurl = sys.argv[0] + localurl
+                
+                thumbnail = str(completedList[x][1])
+                thumbnail = thumbnail.replace('_thumb', '')
+                thumbnail = baseUrl + thumbnail
+                li = xbmcgui.ListItem(completedList[x][2], iconImage=thumbnail)
+                li.setArt({'thumb': thumbnail, 'poster': thumbnail, 'fanart': thumbnail})                
+                xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
+                
+        xbmcplugin.endOfDirectory(addon_handle)
+        return 
+
+    if (subDir[0] == 'Sajatlista'):
+        localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Befejezett'
+        li = xbmcgui.ListItem('Befejezett', iconImage='http://animeaddicts.hu/theme/icons/ok_gray_32.png')
+        xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
+
+        localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Aktualis'
+        li = xbmcgui.ListItem('Aktuális', iconImage='http://animeaddicts.hu/theme/icons/watch_48.png')
+        xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
+        
+        localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Tervezett'
+        li = xbmcgui.ListItem('Tervezett', iconImage='http://animeaddicts.hu/theme/icons/towatch_48.png')
+        xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
+        
+        localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Felfuggesztett'
+        li = xbmcgui.ListItem('Felfüggesztett', iconImage='http://animeaddicts.hu/theme/icons/stalled_48.png')
+        xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
+        
+        localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Dobott'
+        li = xbmcgui.ListItem('Dobott', iconImage='http://animeaddicts.hu/theme/icons/dropped_48.png')
+        xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
+        
+        localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Kedvenc'
+        li = xbmcgui.ListItem('Kedvenc', iconImage='http://animeaddicts.hu/theme/icons/favourite_48.png')
+        xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
+        
+        localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Utalt'
+        li = xbmcgui.ListItem('Utált', iconImage='http://animeaddicts.hu/theme/icons/hated_48.png')
+        xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
+
+        xbmcplugin.endOfDirectory(addon_handle)
+        return 
 
     if (subDir[0] == 'Kereses'):
         kb=xbmc.Keyboard('', 'Keresés', False)
@@ -327,6 +408,15 @@ def build_sub_directory(subDir, category):
 
 def build_url_sub_directory(urlToPlay):
     global session
+
+    sys.stderr.write('build_url_sub_directory(urlToPlay): ' + str(urlToPlay))
+    sys.stderr.write('urlToPlay.find(encyclopedia.php): ' + str(urlToPlay.find('encyclopedia.php')))
+    if (urlToPlay.find('encyclopedia.php') > -1):
+        url_content = load(urlToPlay)
+        completedList = re.compile("<a href='(.*?)'.*?>videó").findall(url_content)
+        if (len(completedList) > 0):
+            urlToPlay = str(completedList[0])
+            sys.stderr.write('build_url_sub_directory(urlToPlay): ' + str(urlToPlay))
 
     url_content = load(baseUrl + urlToPlay)
     completedList = re.compile("<div style='width:100px;height:75px;background:#000 url[(](.*?)[)].*?<h1 style='margin-bottom:5px;'>(.*?)</h1>.*?<a href='(.*?)'><img src=.*?<a href='(.*?)'.*?<a href='(.*?)'", re.MULTILINE|re.DOTALL).findall(url_content)

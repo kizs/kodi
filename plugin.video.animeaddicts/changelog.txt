@@ -34,3 +34,6 @@ V.1.0
 V.1.1
 - hibajavítás: fullHD filmeknél HD helyett fullHD-t játszott le, SD helyett pedig semmit
 - A beállításokban mostantól be lehet állítani, hogy FullHD, HD vagy SD minőséget szeretnénk. Ha nincs FullHD tartalom, akkor automatikusan HD-t játszik helyette.
+
+V.1.2
+- Megjelennek a felhasználó saját listái
