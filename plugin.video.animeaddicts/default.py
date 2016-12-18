@@ -204,10 +204,65 @@ def build_main_directory():
     xbmcplugin.endOfDirectory(addon_handle)
     return
 
-def build_sub_directory(subDir, category):
+def build_sub_directory(subDir, category, animeUrl):
     global dbConn
 
     hParser = HTMLParser.HTMLParser()
+    
+    if (subDir[0] == 'Hasonlo'):
+        url_content = load(baseUrl + animeUrl)
+        completedList = re.compile("<a href='(.*?)'><img src='./theme/modules/project/review.jpg' alt='Ismertető'", re.MULTILINE).findall(url_content)
+
+        if (len(completedList) > 0):
+            url_content = load(baseUrl + completedList[0])
+            completedList = re.compile("Hasonlónak jelölt művek:(.*?)</div></tr></table></div>", re.MULTILINE|re.DOTALL).findall(url_content)
+        
+            if (len(completedList) > 0):
+                completedList2 = re.compile("<a href='(.*?)' class='tool_trigger' title='Empty'.*?src='(.*?)' alt='Főkép'.*?<strong>(.*?)</strong>", re.MULTILINE|re.DOTALL).findall(completedList[0])
+
+                for x in range(0, len(completedList2)):
+                    localurl = baseUrl + completedList2[x][0];
+                    localurl = "?mode=listMovieParts&" + urllib.urlencode({'urlToPlay' : localurl})
+                    localurl = sys.argv[0] + localurl
+                    
+                    thumbnail = str(completedList2[x][1])
+                    thumbnail = thumbnail.replace('_normal', '')
+                    thumbnail = baseUrl + thumbnail
+                    sys.stderr.write('thumbnail: ' + thumbnail)
+                    li = xbmcgui.ListItem(completedList2[x][2], iconImage=thumbnail)
+                    li.setArt({'thumb': thumbnail, 'poster': thumbnail, 'fanart': thumbnail})                
+                    xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
+                
+        xbmcplugin.endOfDirectory(addon_handle)
+        return 
+
+    if (subDir[0] == 'Kapcsolodo'):
+        url_content = load(baseUrl + animeUrl)
+        completedList = re.compile("<a href='(.*?)'><img src='./theme/modules/project/review.jpg' alt='Ismertető'", re.MULTILINE).findall(url_content)
+
+        if (len(completedList) > 0):
+            url_content = load(baseUrl + completedList[0])
+            completedList = re.compile("Közvetlenül kapcsolódó művek:</div>(.*?)</td></tr></table></div>", re.MULTILINE|re.DOTALL).findall(url_content)
+        
+            if (len(completedList) > 0):
+                completedList2 = re.compile("<a href='(.*?)' class='tool_trigger' title='Empty'.*?src='(.*?)' alt='Főkép'.*?<strong>(.*?)</strong>", re.MULTILINE|re.DOTALL).findall(completedList[0])
+
+                for x in range(0, len(completedList2)):
+                    localurl = baseUrl + completedList2[x][0];
+                    localurl = "?mode=listMovieParts&" + urllib.urlencode({'urlToPlay' : localurl})
+                    localurl = sys.argv[0] + localurl
+                    
+                    thumbnail = str(completedList2[x][1])
+                    thumbnail = thumbnail.replace('_normal', '')
+                    thumbnail = baseUrl + thumbnail
+                    sys.stderr.write('thumbnail: ' + thumbnail)
+                    li = xbmcgui.ListItem(completedList2[x][2], iconImage=thumbnail)
+                    li.setArt({'thumb': thumbnail, 'poster': thumbnail, 'fanart': thumbnail})                
+                    xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
+                
+        xbmcplugin.endOfDirectory(addon_handle)
+        return 
+
     if (subDir[0].startswith('Sajatlista_')):
         url_content = load(baseUrl + '/news.php?news')
         completedList = re.compile("<a href='encyclopedia.php\?mylist.(.*?).anime.saw'", re.MULTILINE|re.DOTALL).findall(url_content)
@@ -237,7 +292,6 @@ def build_sub_directory(subDir, category):
                 
             completedList = re.compile("<td  style='width:58px;'>.*?<a href='(.*?)'>.*?<img src='(.*?)' alt='(.*?)'", re.MULTILINE|re.DOTALL).findall(url_content)
             for x in range(0, len(completedList)):
-                name = hParser.unescape(completedList[x][1].decode('utf-8'))
                 localurl = completedList[x][0];
                 localurl = "?mode=listMovieParts&" + urllib.urlencode({'urlToPlay' : localurl})
                 localurl = sys.argv[0] + localurl
@@ -355,7 +409,6 @@ def build_sub_directory(subDir, category):
         return
     
     if (subDir[0] == 'Befejezett'):
-#        url_content = load(baseUrl + 'project.php?completed.jap')
         c = dbConn.cursor()
         for row in c.execute("SELECT movieseries.movieseries_id, movieseries.name, url, genre, year, title, thumbnailurl FROM movieseries WHERE projectstatus = (?) ORDER BY name", (dbProjectCompleted.decode('utf-8'),)):
             li = xbmcgui.ListItem(row[1], iconImage=baseUrl + row[6], thumbnailImage = baseUrl + row[6], )
@@ -372,7 +425,6 @@ def build_sub_directory(subDir, category):
         return 
 
     if (subDir[0] == 'Aktualis'):
-#        url_content = load(baseUrl + 'project.php?ongoing.jap')
         c = dbConn.cursor()
         for row in c.execute("SELECT movieseries.movieseries_id, movieseries.name, url, genre, year, title, thumbnailurl FROM movieseries WHERE projectstatus = (?) ORDER BY name", (dbProjectActual.decode('utf-8'),)):
             li = xbmcgui.ListItem(row[1], iconImage=baseUrl + row[6], thumbnailImage = baseUrl + row[6], )
@@ -387,36 +439,16 @@ def build_sub_directory(subDir, category):
         
         xbmcplugin.endOfDirectory(addon_handle)
         return 
-
-#    completedList = re.compile("<h1><a href='(.*?)'>(.*?)</a></h1>.*?<img src='(.*?)'.*?<strong>(Frissítve|Befejezve):</strong>(.*?)<.*?<span style='font-size:10px;'>(.*?)<", re.MULTILINE|re.DOTALL).findall(url_content)
-#    hParser = HTMLParser.HTMLParser()
-#    if (len(completedList) > 0):
-#        for x in range(0, len(completedList)):
-#            li = xbmcgui.ListItem(hParser.unescape(completedList[x][1].decode('utf-8')), iconImage=baseUrl + completedList[x][2], thumbnailImage = baseUrl + completedList[x][2], )
-#            info = {
-#                'genre': completedList[x][5],
-#                'year': completedList[x][4].strip()[:4],
-#                'title': hParser.unescape(completedList[x][1].decode('utf-8')),
-#            }
-#            li.setInfo('video', info)
-#            li.setArt({'thumb': baseUrl + completedList[x][2], 'poster': baseUrl + completedList[x][2], 'fanart': baseUrl + completedList[x][2]})
-#            li.setProperty('befejezve', completedList[x][3])
-#            xbmcplugin.addDirectoryItem(handle=addon_handle, url=sys.argv[0]+"?mode=listMovieParts&" + urllib.urlencode({'urlToPlay' : completedList[x][0]}), listitem=li, isFolder=True)
-#        
-#    xbmcplugin.endOfDirectory(addon_handle)
     return
 
 def build_url_sub_directory(urlToPlay):
     global session
 
-    sys.stderr.write('build_url_sub_directory(urlToPlay): ' + str(urlToPlay))
-    sys.stderr.write('urlToPlay.find(encyclopedia.php): ' + str(urlToPlay.find('encyclopedia.php')))
     if (urlToPlay.find('encyclopedia.php') > -1):
         url_content = load(urlToPlay)
         completedList = re.compile("<a href='(.*?)'.*?>videó").findall(url_content)
         if (len(completedList) > 0):
             urlToPlay = str(completedList[0])
-            sys.stderr.write('build_url_sub_directory(urlToPlay): ' + str(urlToPlay))
 
     url_content = load(baseUrl + urlToPlay)
     completedList = re.compile("<div style='width:100px;height:75px;background:#000 url[(](.*?)[)].*?<h1 style='margin-bottom:5px;'>(.*?)</h1>.*?<a href='(.*?)'><img src=.*?<a href='(.*?)'.*?<a href='(.*?)'", re.MULTILINE|re.DOTALL).findall(url_content)
@@ -440,6 +472,14 @@ def build_url_sub_directory(urlToPlay):
                 movieUrl = movieUrl + '.SD'
 
             xbmcplugin.addDirectoryItem(handle=addon_handle, url=sys.argv[0]+"?mode=playUrl&" + urllib.urlencode({'urlToPlay' : movieUrl}) + "&" + urllib.urlencode({'referedUrl' : baseUrl + urlToPlay}) + "&" + urllib.urlencode({'videoName' : completedList[x][1]}) + "&" + urllib.urlencode({'videoThumbnail' : completedList[x][0]}), listitem=li, isFolder=True)
+
+    localurl = sys.argv[0]+'?mode=changeDir&dirName=Kapcsolodo&' + urllib.urlencode({'urlToPlay' : urlToPlay})
+    li = xbmcgui.ListItem('Közvetlenül kapcsolódó művek')
+    xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
+
+    localurl = sys.argv[0]+'?mode=changeDir&dirName=Hasonlo&' + urllib.urlencode({'urlToPlay' : urlToPlay})
+    li = xbmcgui.ListItem('Hasonlónak jelölt művek',)
+    xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
         
     xbmcplugin.endOfDirectory(addon_handle)
 
@@ -593,7 +633,11 @@ if mode is None:
     doLogin()
     build_main_directory()
 elif mode[0] == 'changeDir':
-    build_sub_directory(subDir, category)
+    if (urlToPlay is None):
+        build_sub_directory(subDir, category, '')
+    else:
+        build_sub_directory(subDir, category, urlToPlay[0])
+        
 elif mode[0] == 'listMovieParts':
     build_url_sub_directory(urlToPlay[0])
 elif mode[0] == 'openSetup':
