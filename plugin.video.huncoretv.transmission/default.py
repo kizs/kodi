@@ -3,32 +3,29 @@
 
 import HTMLParser
 import base64
-from json import dumps
 import os
-import re
 import requests, requests.utils, pickle
 import shutil
-import sys
-import threading
-from time import sleep
+#import threading
+#from time import sleep
 import time
 import urllib
-import urllib2
+#import urllib2
 import urlparse
 
 import xbmcaddon
 import xbmcgui
 import xbmcplugin
 
-import sqlite3
-import datetime
-from kizstorrent import play_torrenturl
-
-from python_libtorrent import get_libtorrent
+#import datetime
 import xbmc
 
-torrentAddon = xbmcaddon.Addon(id='service.kizstorrent')
-addon = xbmcaddon.Addon(id='plugin.video.huncoretv')
+import sys
+import json
+import re
+
+
+addon = xbmcaddon.Addon(id='plugin.video.huncoretv.transmission')
 thisAddonDir = xbmc.translatePath(addon.getAddonInfo('path')).decode('utf-8')
 sys.path.append(os.path.join(thisAddonDir, 'resources', 'lib'))
 
@@ -38,8 +35,6 @@ args = urlparse.parse_qs(sys.argv[2][1:])
 
 tags = ["minden","vígjáték","dráma","életrajz","akció","romantikus","dokumentumfilm","kaland","animáció","thriller","családi","bűnügyi","rövidfilm","musical","sci-fi","misztikus","háborús","western","horror","történelmi","sport","zene","ismeretterjesztő","valóságshow","3D","fantasy"]
 appName = 'HUNCoreTV'
-libtorrent=get_libtorrent()
-
 logined = False
 
 xbmcplugin.setContent(addon_handle, 'movies')
@@ -48,29 +43,17 @@ baseUrl = 'https://ncore.cc'
 felhasznalo = addon.getSetting('felhasznalonev')
 jelszo = addon.getSetting('jelszo')
 torrentPath = addon.getSetting('torrentPath')
-torrentFullDownload = addon.getSetting('torrentFullDownload')
-tmptorles = addon.getSetting('tmptorlesido')
-tmpTorrentTorlesido = addon.getSetting('tmpTorrentTorlesido')
-elonySzazalek = int(addon.getSetting('elonySzazalek'))
+transmission_url = addon.getSetting('transmission_url')
+transmission_username = addon.getSetting('transmission_username')
+transmission_password = addon.getSetting('transmission_password')
+transmissionPath = addon.getSetting('transmissionPath')
 
-if (felhasznalo == "" or jelszo == "" or torrentPath == ""):
+if (felhasznalo == "" or jelszo == "" or torrentPath == "" or transmission_url == "" or transmissionPath == ""):
     dialog = xbmcgui.Dialog()
     dialog.ok("Hiba!", "Nem végezted el a beállításokat!", "", "")
     addon.openSettings()
     sys.exit()
 
-transmission_send = addon.getSetting('send_to_transmission')
-transmission_url = addon.getSetting('transmission_url')
-transmission_username = addon.getSetting('transmission_username')
-transmission_password = addon.getSetting('transmission_password')
-transmission_paused = addon.getSetting('transmission_paused')
-
-utorrent_send =  addon.getSetting('utorrent_send')
-utorrent_url = addon.getSetting('utorrent_url')
-if not utorrent_url.endswith("/"):
-    utorrent_url = utorrent_url + "/"
-utorrent_username = addon.getSetting('utorrent_username')
-utorrent_password = addon.getSetting('utorrent_password')
 
 filmHUNtipus=''
 if addon.getSetting('xvid_hun') == 'true':
@@ -120,13 +103,6 @@ if addon.getSetting('dvdser') == 'true':
 if addon.getSetting('hdser') == 'true':
     sorozatENGtipus = sorozatENGtipus + ',hdser'
 sorozatENGtipus= sorozatENGtipus[1:]
-
-
-try:
-    torrentSession
-except NameError:
-    torrentSession = libtorrent.session()
-    torrentSession.listen_on(6881, 6889)
 
 def newSession():
     s = requests.Session()
@@ -184,62 +160,6 @@ def load(url, post = None):
 
     return r.encode('utf-8')
 
-def send_to_downloader():
-    if transmission_send == 'true':
-        progress = xbmcgui.DialogProgress()
-        progress.create(appName, 'Calling Transmission...')
-        try:
-            torrentFileContent = open(torrentPath + 'mytorrent.torrent', 'rb')
-            torrent_content = base64.b64encode(torrentFileContent.read())
-            torrentFileContent.close()
-            
-            if len(transmission_username) > 0:
-                sessionid_request = requests.get(transmission_url, auth=(transmission_username, transmission_password), verify=False)
-            else:
-                sessionid_request = requests.get(transmission_url, verify=False)
-                
-            sessionid = sessionid_request.headers['x-transmission-session-id']
-            if sessionid:
-                headers = {"X-Transmission-Session-Id": sessionid}
-                body = dumps({"method": "torrent-add", "arguments": {"metainfo": torrent_content, "paused":transmission_paused}})
-                post_request = requests.post(transmission_url, data=body, headers=headers, auth=(transmission_username, transmission_password), verify=False)
-                if str(post_request.text).find("success") == -1:
-                    dialog = xbmcgui.Dialog().ok(appName, "Hiba történt a Transmission megszólításakor!", post_request.text, "");
-                else:
-                    progress.close()
-                    return True
-        except:
-            dialog = xbmcgui.Dialog().ok(appName, "Hiba történt a Transmission megszólításakor!", str(sys.exc_info()[0]), "(Esetleg hibás beállítások?)");
-        
-        progress.close()
-        return False
-    elif utorrent_send == 'true':
-        progress = xbmcgui.DialogProgress()
-        progress.create(appName, u'Calling \u00b5Torrent...')
-        utorrent_url_token = utorrent_url + 'token.html'
-        
-        try:
-            auth = requests.auth.HTTPBasicAuth(utorrent_username, utorrent_password)
-            #sys.stderr.write('utorrent_url_token: ' + utorrent_url_token)
-            content = requests.get(utorrent_url_token, auth=auth)
-            #sys.stderr.write('content: ' + content.text)
-            token = re.search('<div[^>]*id=[\"\']token[\"\'][^>]*>([^<]*)</div>', content.text).group(1)
-            guid = content.cookies['GUID']
-            cookies = dict(GUID = guid)
-            
-            params = {'action':'add-file','token': token}
-            files = {'torrent_file': open(torrentPath + 'mytorrent.torrent', 'rb')}
-            requests.post(url=utorrent_url, auth=auth, cookies=cookies, params=params, files=files)
-            progress.close()
-            return True
-        except:
-            dialog = xbmcgui.Dialog().ok(appName, u"Hiba történt a \u00b5Torrent megszólításakor!", str(sys.exc_info()[0]), "(Esetleg hibás beállítások?)");
-
-        progress.close()
-        return False
-    else:
-        return True
-
 def build_torrent_sub_directory(video_url, videoname):
     video_url = base64.b64decode(video_url)
     #sys.stderr.write('build_torrent_sub_directory: ' + video_url)
@@ -250,16 +170,19 @@ def build_torrent_sub_directory(video_url, videoname):
     torrentData = load(video_url)
     content = session.get(video_url, stream=True)
     content.raw.decode_content = True
+    
     output = open(torrentPath + 'mytorrent.torrent', 'wb')
     shutil.copyfileobj(content.raw, output) 
     output.close()
 
-    info = libtorrent.torrent_info(torrentPath + 'mytorrent.torrent')
-    
-    for x in range(0, info.num_files()):
-        file_entry = info.file_at(x)
-        localurl = sys.argv[0]+'?mode=playTorrent&videoName=' + videoname + '&movieURL=' + video_url + '&fileToPlay=' + file_entry.path
-        li = xbmcgui.ListItem(os.path.basename(file_entry.path).decode('utf-8'))
+    torrentFileContent = open(torrentPath + 'mytorrent.torrent')
+    paths = getTorrentFiles(torrentFileContent)
+    torrentFileContent.close();
+
+    for x in range(0, len(paths)):
+        file_entry = paths[x]
+        localurl = sys.argv[0]+'?mode=playTorrent&videoName=' + videoname + '&movieURL=' + video_url + '&fileToPlay=' + file_entry
+        li = xbmcgui.ListItem(os.path.basename(file_entry).decode('utf-8'))
         #sys.stderr.write('file_entry.path: ' + file_entry.path)
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=False)
         
@@ -277,10 +200,6 @@ def build_main_directory():
 
     localurl = sys.argv[0]+'?mode=openSetup'
     li = xbmcgui.ListItem('Beállítások')
-    xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=False)
-
-    localurl = sys.argv[0]+'?mode=openSetupTorrent'
-    li = xbmcgui.ListItem('Torrent beállítások')
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=False)
 
     xbmcplugin.endOfDirectory(addon_handle)
@@ -449,6 +368,165 @@ def build_sub_directory(subDir, tag):
 
     return
 
+def tokenize(text, match=re.compile("([idel])|(\d+):|(-?\d+)").match):
+    i = 0
+    while i < len(text):
+        m = match(text, i)
+        s = m.group(m.lastindex)
+        i = m.end()
+        if m.lastindex == 2:
+            yield "s"
+            yield text[i:i+int(s)]
+            i = i + int(s)
+        else:
+            yield s
+
+def decode_item(next, token):
+    if token == "i":
+        # integer: "i" value "e"
+        data = int(next())
+        if next() != "e":
+            raise ValueError
+    elif token == "s":
+        # string: "s" value (virtual tokens)
+        data = next()
+    elif token == "l" or token == "d":
+        # container: "l" (or "d") values "e"
+        data = []
+        tok = next()
+        while tok != "e":
+            data.append(decode_item(next, tok))
+            tok = next()
+        if token == "d":
+            data = dict(zip(data[0::2], data[1::2]))
+    else:
+        raise ValueError
+    return data
+
+def decodeTorrent(text):
+    try:
+        src = tokenize(text)
+        data = decode_item(src.next, src.next())
+        for token in src: # look for more tokens
+            raise SyntaxError("trailing junk")
+    except (AttributeError, ValueError, StopIteration):
+        raise SyntaxError("syntax error")
+    return data
+
+def getTorrentFiles(torrentFileContent):
+    filePaths = []
+    eredmeny = decodeTorrent(torrentFileContent.read())
+    if "files" in eredmeny["info"]:
+        for x in range (0, len(eredmeny["info"]["files"])):
+            filePath = ""
+            for y in range (0, len(eredmeny["info"]["files"][x]["path"])):
+                filePath = filePath + eredmeny["info"]["files"][x]["path"][y] + "/"
+            filePaths.append(filePath[0:len(filePath)-1]);
+    if eredmeny["info"]["name"]:
+        filePaths.append(eredmeny["info"]["name"]);
+    
+    return filePaths
+
+def getTorrentFileStatus(torrent_file):
+    retVal=[]
+    retVal.append("")
+    retVal.append(int(-1))
+    
+    try:
+        if len(transmission_username) > 0:
+            sessionid_request = requests.get(transmission_url, auth=(transmission_username, transmission_password), verify=False)
+        else:
+            sessionid_request = requests.get(transmission_url, verify=False)
+            
+        sessionid = sessionid_request.headers['x-transmission-session-id']
+        if sessionid:
+            headers = {"X-Transmission-Session-Id": sessionid}
+            body = json.dumps({"method": "torrent-get", "arguments": {"fields": ("id","files", "rateDownload")}})
+            if len(transmission_username) > 0:
+                post_request = requests.post(transmission_url, data=body, headers=headers, auth=(transmission_username, transmission_password), verify=False)
+            else:
+                post_request = requests.post(transmission_url, data=body, headers=headers, verify=False)
+            ize = json.loads(post_request.text)
+            
+            torrents = ize['arguments']['torrents']
+            for x in range(0, len(torrents)) :
+              files = torrents[x]['files']
+              retVal[0] = str(int(torrents[x]['rateDownload'])/1000) + " KB/s"
+              for y in range(0, len(files)) :
+                  fileName = files[y]['name']
+                  fileLength = files[y]['length']
+                  fileBytesCompleted = files[y]['bytesCompleted']
+                  fileBytesCompleted = files[y]['bytesCompleted']
+                  if (fileName.encode('utf-8') == torrent_file):
+                      if (fileLength == fileBytesCompleted):
+                          retVal[1]=int(100)
+                      else:
+                          retVal[1]=int(fileBytesCompleted/(fileLength/100))
+                      return retVal
+                  
+        return retVal
+    except:
+        sys.stderr.write(sys.exc_info()[0])
+
+    return retVal
+
+def play_torrenturl(fileToPlay, blob, thumbnail):
+    try:
+        torrentName = decodeTorrent(blob)["info"]["name"]
+        #torrentFileContent = open(torrentPath + 'mytorrent.torrent', 'rb')
+        torrent_content = base64.b64encode(blob)
+        #torrentFileContent.close()
+        
+        if len(transmission_username) > 0:
+            sessionid_request = requests.get(transmission_url, auth=(transmission_username, transmission_password), verify=False)
+        else:
+            sessionid_request = requests.get(transmission_url, verify=False)
+            
+        sessionid = sessionid_request.headers['x-transmission-session-id']
+        if sessionid:
+            headers = {"X-Transmission-Session-Id": sessionid}
+            body = json.dumps({"method": "torrent-add", "arguments": {"metainfo": torrent_content, "paused":"false"}})
+            if len(transmission_username) > 0:
+                post_request = requests.post(transmission_url, data=body, headers=headers, auth=(transmission_username, transmission_password), verify=False)
+            else:
+                post_request = requests.post(transmission_url, data=body, headers=headers, verify=False)
+                
+            if str(post_request.text).find("success") == -1:
+                dialog = xbmcgui.Dialog().ok(appName, "Hiba történt a Transmission megszólításakor!", post_request.text, "");
+    except:
+        dialog = xbmcgui.Dialog().ok(appName, "Hiba történt a Transmission megszólításakor!", str(sys.exc_info()[0]), "(Esetleg hibás beállítások?)");
+        return
+    
+    fullName = torrentName + "/" + fileToPlay
+    sys.stderr.write('getTorrentFileStatus ' + torrentName + "/" + fileToPlay + '\n')
+    download_percent = getTorrentFileStatus(fullName.encode("utf-8"))[1]
+    sys.stderr.write('download_percent ' + str(download_percent) + '\n')
+    xbmc.Player().stop()
+    progress = xbmcgui.DialogProgress()
+    progress.create('Progress: ' + fileToPlay)
+    while (download_percent < 100):
+        s = getTorrentFileStatus(fullName)
+        download_percent = s[1]
+        progress.update(download_percent, 'Download rate: ' + str(s[0]), str(download_percent) + '%')
+
+        if (progress.iscanceled()):
+            break
+        
+        time.sleep(1)
+
+    progress.close()
+    if (download_percent >= 100):
+        sys.stderr.write('Playing ' + transmissionPath + '/' + torrentName + "/" + fileToPlay + '\n')
+        play_torrent(torrentName, thumbnail, transmissionPath + '/' + torrentName + "/" + fileToPlay)
+    return
+
+def play_torrent(videoname, thumbnail, filePath):
+    videoitem = xbmcgui.ListItem(label=videoname, thumbnailImage=thumbnail)
+    videoitem.setInfo(type='Video', infoLabels={'Title': videoname})
+    xbmc.Player().play(filePath, videoitem)
+    return
+
+
 # main...
 base_url = sys.argv[0]
 addon_handle = int(sys.argv[1])
@@ -472,14 +550,11 @@ elif mode[0] == 'changeDir':
     ##sys.stderr.write('mode: ' + mode[0] + ', subDir: ' + subDir[0] + '\n')
     build_sub_directory(subDir, tag)
 elif mode[0] == 'playTorrent':
-    send_to_downloader()
     f = open(torrentPath + 'mytorrent.torrent', 'rb')
     blob = f.read()
     f.close()
-    play_torrenturl(fileToPlay[0], movieURL[0], videoName[0], None, tmpTorrentTorlesido, elonySzazalek, torrentFullDownload, blob)
+    play_torrenturl(fileToPlay[0], blob, None)
 elif mode[0] == 'listTorrent':
     build_torrent_sub_directory(movieURL[0], videoName[0])
 elif mode[0] == 'openSetup':
     addon.openSettings()
-elif mode[0] == 'openSetupTorrent':
-    torrentAddon.openSettings()

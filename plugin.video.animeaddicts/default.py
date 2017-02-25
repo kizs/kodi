@@ -388,10 +388,10 @@ def build_sub_directory(subDir, category, animeUrl):
     if (subDir[0] == 'ClearDB'):
         check_db()
         c = dbConn.cursor()
-        c.execute('DELETE FROM movieseries')
         c.execute('DELETE FROM category')
-        c.execute('DELETE FROM mysequence')
-        c.execute('INSERT INTO mysequence VALUES(0)')
+        c.execute('DELETE FROM movieseries')
+        #c.execute('DELETE FROM mysequence')
+        #c.execute('INSERT INTO mysequence VALUES(0)')
         try:
             c.execute('CREATE INDEX movieseries_name ON movieseries(name)')
         except:
@@ -488,10 +488,12 @@ def build_url_sub_directory(urlToPlay):
 
 def check_db():
     global dbConn
+    dbversion = 0
     
     c = dbConn.cursor()
     try:
         c.execute('SELECT dbversion FROM version')
+        dbversion = c.fetchone()[0]
     except:
         c.execute('CREATE TABLE version(dbversion integer)')
         c.execute('INSERT INTO version VALUES(1)')
@@ -499,42 +501,44 @@ def check_db():
             c.execute('DROP TABLE movieseries')
         except:
             sys.stderr.write('Első indulás')
-    
-    try:
-        c.execute('SELECT COUNT(*) FROM mysequence')
-    except:
-        c.execute('CREATE TABLE mysequence(number integer)')
-        c.execute('INSERT INTO mysequence VALUES(0)')
 
-    try:
-        c.execute('SELECT COUNT(*) FROM movieseries')
-    except:
-        c.execute('CREATE TABLE movieseries(movieseries_id INTEGER PRIMARY KEY, name TEXT, url TEXT, genre TEXT, year TEXT, title TEXT, thumbnailurl TEXT, projectstatus TEXT)')
-        c.execute('CREATE INDEX movieseries_name ON movieseries (name)')
+    
+    if (dbversion < 2):
+        try:
+            c.execute('DROP TABLE mysequence');
+            #c.execute('SELECT COUNT(*) FROM mysequence')
+        except:
+            pass
+            #c.execute('CREATE TABLE mysequence(number integer)')
+            #c.execute('INSERT INTO mysequence VALUES(0)')
+
+    if (dbversion < 2):
+        try:
+            c.execute('SELECT COUNT(*) FROM movieseries')
+            c.execute('DROP TABLE movieseries');
+            c.execute('CREATE TABLE movieseries(movieseries_id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, url TEXT, genre TEXT, year TEXT, title TEXT, thumbnailurl TEXT, projectstatus TEXT)')
+            c.execute('CREATE INDEX movieseries_name ON movieseries (name)')
+        except:
+            c.execute('CREATE TABLE movieseries(movieseries_id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, url TEXT, genre TEXT, year TEXT, title TEXT, thumbnailurl TEXT, projectstatus TEXT)')
+            c.execute('CREATE INDEX movieseries_name ON movieseries (name)')
+    
 
     c.execute('DELETE FROM movieseries where projectstatus=(?)', (dbProjectActual,)) #Az aktuálisakat mindig frissítnei kell!
 
-    try:
-        c.execute('SELECT COUNT(*) FROM category')
-    except:
-        c.execute('CREATE TABLE category(category_id INTEGER PRIMARY KEY, movieseries_id INTEGER, name TEXT)')
-        c.execute('CREATE INDEX category_movieseries_1 ON category (name, movieseries_id)')
-        c.execute('CREATE INDEX category_movieseries_2 ON category (name)')
+    if (dbversion < 2):
+        try:
+            c.execute('SELECT COUNT(*) FROM category')
+            c.execute('DROP TABLE category');
+            c.execute('CREATE TABLE category(category_id INTEGER PRIMARY KEY AUTOINCREMENT, movieseries_id INTEGER, name TEXT)')
+            c.execute('CREATE INDEX category_movieseries_1 ON category (name, movieseries_id)')
+            c.execute('CREATE INDEX category_movieseries_2 ON category (name)')
+        except:
+            c.execute('CREATE TABLE category(category_id INTEGER PRIMARY KEY AUTOINCREMENT, movieseries_id INTEGER, name TEXT)')
+            c.execute('CREATE INDEX category_movieseries_1 ON category (name, movieseries_id)')
+            c.execute('CREATE INDEX category_movieseries_2 ON category (name)')
         
     c.close()
     return
-
-def getnewid_db():
-    global dbConn
-    c = dbConn.cursor()
-    c.execute('SELECT number FROM mysequence')
-    number = c.fetchone()[0]
-    c.execute('UPDATE mysequence SET number=number+1')
-    c.close()
-    dbConn.commit()
-    
-    return str(number).decode('utf-8')
-
 
 def update_movie_db(url, projectStatus):
     global dbConn
@@ -570,11 +574,11 @@ def update_movie_db(url, projectStatus):
             
             if (number == 0):
                 insertMovieRowNum = insertMovieRowNum + 1
-                movideID = getnewid_db()
+                #movideID = getnewid_db()
                 #c.execute("INSERT INTO movieseries VALUES(?,?,?,?,?,?,?)", (movideID, name, url, genre, year, name, thumburl))
 
                 movie=[]
-                movie.append(movideID)
+                #movie.append(movideID)
                 movie.append(name)
                 movie.append(url)
                 movie.append(genre)
@@ -582,6 +586,7 @@ def update_movie_db(url, projectStatus):
                 movie.append(name)
                 movie.append(thumburl)
                 movie.append(projectStatus)
+                c.execute("INSERT INTO movieseries(name, url, genre, year, title, thumbnailurl, projectstatus) VALUES(?,?,?,?,?,?,?)", movie)
                 insertMovieRows.append(movie)
                 
                 categories = genre.split(',')
@@ -591,19 +596,22 @@ def update_movie_db(url, projectStatus):
                         if (len(category) > 0):
                             insertCategoryRowNum = insertCategoryRowNum + 1
                             category=[]
-                            category.append(getnewid_db())
+                            #category.append(getnewid_db())
+                            c.execute("SELECT movieseries_id FROM movieseries WHERE url=?", (url, ))
+                            movideID = c.fetchone()[0]
                             category.append(movideID)
                             category.append(categories[y].strip())
                             insertCategoryRows.append(category)
                             #category(category_id integer, movieseries_id integer, name text)
                             #c.execute("INSERT INTO category VALUES(?,?,?)", (getnewid_db(), movideID, categories[y].strip()))
+                            #c.execute("INSERT INTO category VALUES(?,?,?)", category)
             
     
-    if (insertMovieRowNum > -1):
-        c.executemany("INSERT INTO movieseries VALUES(?,?,?,?,?,?,?,?)", insertMovieRows)
+#    if (insertMovieRowNum > -1):
+#        c.executemany("INSERT INTO movieseries(name, url, genre, year, title, thumbnailurl, projectstatus) VALUES(?,?,?,?,?,?,?,?)", insertMovieRows)
 
     if (insertCategoryRowNum > -1):
-        c.executemany("INSERT INTO category VALUES(?,?,?)", insertCategoryRows)
+        c.executemany("INSERT INTO category(movieseries_id, name) VALUES(?,?)", insertCategoryRows)
     
     c.close()
     dbConn.commit()

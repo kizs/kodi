@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<settings>
+	<category label="Bejelentkezés">
+		<setting id="felhasznalonev" type="text" label="nCore felhasználónév" default="" />
+		<setting id="jelszo" type="text" option="hidden" label="nCore jelszó"	default="" />
+		<setting id="torrentPath" type="folder" option="writeable" label="Ideiglenes fájlok helye" default="" />
+	    <setting id="utorrent_url" type="text" label="uTorrent rpc url" default="http://xxx.xxx.xxx.xxx:yyyy/gui/" />
+	    <setting id="utorrent_username" type="text" label="uTorrent felhasználónév (ha nincs hagyd üresen)" default="" />
+		<setting id="utorrent_password" type="text" option="hidden" label="utorrent jelszó (ha nincs hagyd üresen)"	default="" />
+		<setting id="utorrentPath" type="folder" label="utorrent által letöltött fájlok helye" default="" />
+	</category>
+	<category label="Filmek">
+		<setting label="SD/HU" type="bool" id="xvid_hun" default="true" />
+		<setting label="DVDR/HU" type="bool" id="dvd_hun" default="true" />
+		<setting label="DVD9/HU" type="bool" id="dvd9_hun" default="true" />
+		<setting label="HD/HU" type="bool" id="hd_hun" default="true" />
+		<setting label="SD/EN" type="bool" id="xvid" default="true" />
+		<setting label="DVDR/EN" type="bool" id="dvd" default="true" />
+		<setting label="DVD9/EN" type="bool" id="dvd9" default="true" />
+		<setting label="HD/EN" type="bool" id="hd" default="true" />
+	</category>
+	<category label="Sorozatok">
+		<setting label="SD/HU" type="bool" id="xvidser_hun" default="true" />
+		<setting label="DVDR/HU" type="bool" id="dvdser_hun" default="true" />
+		<setting label="HD/HU" type="bool" id="hdser_hun" default="true" />
+		<setting label="SD/EN" type="bool" id="xvidser" default="true" />
+		<setting label="DVDR/EN" type="bool" id="dvdser" default="true" />
+		<setting label="HD/EN" type="bool" id="hdser" default="true" />
+	</category>
+	<category label="XXX">
+		<setting label="SD" type="bool" id="xxx_xvid" default="true" />
+		<setting label="DVD" type="bool" id="xxx_dvd" default="true" />
+		<setting label="HD" type="bool" id="xxx_hd" default="true" />
+	</category>
+</settings>
