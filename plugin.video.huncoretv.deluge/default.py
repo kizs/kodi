@@ -20,8 +20,10 @@ import sys
 import json
 import re
 
+from resources.lib.client import DelugeRPCClient
 
-addon = xbmcaddon.Addon(id='plugin.video.huncoretv.utorrent')
+
+addon = xbmcaddon.Addon(id='plugin.video.huncoretv.deluge')
 thisAddonDir = xbmc.translatePath(addon.getAddonInfo('path')).decode('utf-8')
 sys.path.append(os.path.join(thisAddonDir, 'resources', 'lib'))
 
@@ -39,14 +41,13 @@ baseUrl = 'https://ncore.cc'
 felhasznalo = addon.getSetting('felhasznalonev')
 jelszo = addon.getSetting('jelszo')
 torrentPath = addon.getSetting('torrentPath')
-utorrent_url = addon.getSetting('utorrent_url')
-if not utorrent_url.endswith("/"):
-    utorrent_url = utorrent_url + "/"
-utorrent_username = addon.getSetting('utorrent_username')
-utorrent_password = addon.getSetting('utorrent_password')
-utorrentPath = addon.getSetting('utorrentPath')
+deluge_url = addon.getSetting('deluge_url')
+deluge_port = int(addon.getSetting('deluge_port'))
+deluge_username = addon.getSetting('deluge_username')
+deluge_password = addon.getSetting('deluge_password')
+delugePath = addon.getSetting('delugePath')
 
-if (felhasznalo == "" or jelszo == "" or torrentPath == "" or utorrent_url == "" or utorrentPath == ""):
+if (felhasznalo == "" or jelszo == "" or torrentPath == "" or deluge_url == "" or delugePath == ""):
     dialog = xbmcgui.Dialog()
     dialog.ok("Hiba!", "Nem végezted el a beállításokat!", "", "")
     addon.openSettings()
@@ -425,114 +426,52 @@ def getTorrentFiles(torrentFileContent):
     
     return filePaths
 
-def getToken():
-    uDatas = []
-    auth = requests.auth.HTTPBasicAuth(utorrent_username, utorrent_password)
-    sessionid_request = requests.get(utorrent_url + 'token.html', auth=auth, verify=False)
-        
-    token = re.search('<div[^>]*id=[\"\']token[\"\'][^>]*>([^<]*)</div>', sessionid_request.text).group(1)
-    guid = sessionid_request.cookies['GUID']
-    cookies = dict(GUID = guid)
-
-    uDatas.append(token)
-    uDatas.append(cookies)
-
-    output = open(torrentPath + 'utorrent.data', 'wb')
-    json.dump(uDatas, output)
-    output.close()
-    
-    return uDatas
-
-def getuTorrentTorrentList(uDatas):
-    auth = requests.auth.HTTPBasicAuth(utorrent_username, utorrent_password)
-    try:
-        session_request = requests.get(utorrent_url + '?list=1&token=' + uDatas[0], cookies=uDatas[1], auth=auth, verify=False)
-    except:
-        return None
-    
-    if session_request.text.encode('utf-8').find('invalid request') > -1:
-        return None
-    
-    return session_request
-    
-
 def getTorrentFileStatus(torrent_file):
     retVal=[]
     retVal.append("")
     retVal.append(int(-1))
-    auth = requests.auth.HTTPBasicAuth(utorrent_username, utorrent_password)
 
     try:
-        input = open(torrentPath + 'utorrent.data', 'rb')
-        uDatas = json.load(input)
-        input.close()
+        delugeClient = DelugeRPCClient(deluge_url, deluge_port, deluge_username, deluge_password)
+        delugeClient.connect()
+        eredmeny = delugeClient.call('core.get_torrents_status', {}, ['name', 'total_size', 'total_done', 'progress', 'files', 'download_payload_rate'])
     except:
-        uDatas = getToken()
+        dialog = xbmcgui.Dialog().ok(appName, "Hiba történt a Deluge megszólításakor!", str(sys.exc_info()[0]) + "-" + str(sys.exc_info()[1]), "(Esetleg hibás beállítások?)");
+        return retVal
     
-    session_request = getuTorrentTorrentList(uDatas)
-    if (session_request is None):
-        uDatas = getToken()
-        session_request = getuTorrentTorrentList(uDatas)
-    
-        if (session_request is None):
-            dialog = xbmcgui.Dialog().ok(appName, u"Hiba történt a \u00b5Torrent megszólításakor!", str(sys.exc_info()[0]), "(Esetleg hibás beállítások?)");
-            return
-    
-    ize = json.loads(session_request.text)
-    
-    torrents = ize['torrents']
-    for x in range(0, len(torrents)) :
-        torrentHash = torrents[x][0]
-        torrentName = torrents[x][2]
-        retVal[0]=str(int(torrents[x][9])/1000) + ' KB/s'
-        session_request2 = requests.get(utorrent_url + '?action=getfiles&hash=' + torrentHash + '&token=' + uDatas[0], cookies=uDatas[1], auth=auth, verify=False)
-
-        ize2 = json.loads(session_request2.text)
-        files = ize2["files"][1]
-      
-        for y in range(0, len(files)) :
-            fileName = files[y][0]
-            sys.stderr.write('File: ' + torrent_file + ', ' + torrentName + '/' + fileName.encode('utf-8') + "\n")
-            fileLength = files[y][1]
-            fileBytesCompleted = files[y][2]
-            if (torrentName + '/' + fileName.encode('utf-8').replace('\\','/') == torrent_file.replace('\\','/')):
+    for key in eredmeny:
+        retVal[0]=str(int(eredmeny[key]['download_payload_rate'])/1000) + ' KB/s'
+        fileLength = eredmeny[key]['total_size']
+        fileBytesCompleted = eredmeny[key]['total_done']
+        files=eredmeny[key]['files']
+        for x in range(0, len(files)) :
+            fileName = files[x]['path'].encode('utf-8')
+            if (fileName.encode('utf-8').replace('\\','/') == torrent_file.replace('\\','/')):
                 if (fileLength == fileBytesCompleted):
                     retVal[1]=int(100)
                 else:
                     retVal[1]=int(fileBytesCompleted/(fileLength/100))
                 return retVal
-              
+                  
     return retVal
-
 
 def play_torrenturl(fileToPlay, blob, thumbnail):
     torrentName = decodeTorrent(blob)["info"]["name"]
     torrent_content = base64.b64encode(blob)
-    auth = requests.auth.HTTPBasicAuth(utorrent_username, utorrent_password)
+        
+    try:
+        delugeClient = DelugeRPCClient(deluge_url, deluge_port, deluge_username, deluge_password)
+        delugeClient.connect()
+        eredmeny = delugeClient.call('core.add_torrent_file', torrentName, torrent_content, [])
+    except:
+        dialog = xbmcgui.Dialog().ok(appName, "Hiba történt a Deluge megszólításakor!", str(sys.exc_info()[0]) + "-" + str(sys.exc_info()[1]), "(Esetleg hibás beállítások?)");
+        return
 
-    try:
-        input = open(torrentPath + 'utorrent.data', 'rb')
-        uDatas = json.load(input)
-        input.close()
-    except:
-        uDatas = getToken()
-            
-    try:
-        params = {'action':'add-file','token': uDatas[0]}
-        files = {'torrent_file': blob}
-        requests.post(url=utorrent_url, auth=auth, cookies=uDatas[1], params=params, files=files)
-    except:
-        try:
-            token = getToken()
-            params = {'action':'add-file','token': uDatas[0]}
-            files = {'torrent_file': blob}
-            requests.post(url=utorrent_url, auth=auth, cookies=uDatas[1], params=params, files=files)
-        except:
-            dialog = xbmcgui.Dialog().ok(appName, "Hiba történt a utorrent megszólításakor!", str(sys.exc_info()[0]), "(Esetleg hibás beállítások?)");
-            return
     
     fullName = torrentName + "/" + fileToPlay
+    sys.stderr.write('getTorrentFileStatus ' + torrentName + "/" + fileToPlay + '\n')
     download_percent = getTorrentFileStatus(fullName.encode("utf-8"))[1]
+    sys.stderr.write('download_percent ' + str(download_percent) + '\n')
     xbmc.Player().stop()
     progress = xbmcgui.DialogProgress()
     progress.create('Progress: ' + fileToPlay)
@@ -548,8 +487,8 @@ def play_torrenturl(fileToPlay, blob, thumbnail):
 
     progress.close()
     if (download_percent >= 100):
-        sys.stderr.write('Playing ' + utorrentPath + '/' + torrentName + "/" + fileToPlay + '\n')
-        play_torrent(torrentName, thumbnail, utorrentPath + '/' + torrentName + "/" + fileToPlay)
+        sys.stderr.write('Playing ' + delugePath + '/' + torrentName + "/" + fileToPlay + '\n')
+        play_torrent(torrentName, thumbnail, delugePath + '/' + torrentName + "/" + fileToPlay)
     return
 
 def play_torrent(videoname, thumbnail, filePath):

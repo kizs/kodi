@@ -6,18 +6,14 @@ import base64
 import os
 import requests, requests.utils, pickle
 import shutil
-#import threading
-#from time import sleep
 import time
 import urllib
-#import urllib2
 import urlparse
 
 import xbmcaddon
 import xbmcgui
 import xbmcplugin
 
-#import datetime
 import xbmc
 
 import sys
@@ -457,7 +453,7 @@ def getTorrentFileStatus(torrent_file):
                   fileLength = files[y]['length']
                   fileBytesCompleted = files[y]['bytesCompleted']
                   fileBytesCompleted = files[y]['bytesCompleted']
-                  if (fileName.encode('utf-8') == torrent_file):
+                  if (fileName.encode('utf-8').replace('\\','/') == torrent_file.replace('\\','/')):
                       if (fileLength == fileBytesCompleted):
                           retVal[1]=int(100)
                       else:

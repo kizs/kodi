@@ -131,6 +131,7 @@ def getTorrentFileStatus(torrent_file):
     for x in range(0, len(torrents)) :
         torrentHash = torrents[x][0]
         torrentName = torrents[x][2]
+        retVal[0] = ""
         sys.stderr.write('Files\n')
         session_request2 = requests.get(utorrent_url + '?action=getfiles&hash=' + torrentHash + '&token=' + uDatas[0], cookies=uDatas[1], auth=auth, verify=False)
 
@@ -138,7 +139,6 @@ def getTorrentFileStatus(torrent_file):
         ize2 = json.loads(session_request2.text)
         files = ize2["files"][1]
       
-        retVal[0] = ""
         for y in range(0, len(files)) :
             fileName = files[y][0]
             sys.stderr.write('File: ' + fileName.encode('utf-8') + "\n")
