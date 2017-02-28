@@ -1,3 +1,6 @@
+V.1.4.0
+- Saját adatbázis használat SQLite helyett (andoridos Kodi 17 miatt)
+
 V.1.3.5
 - Kodi 17 kompatibilitás
 

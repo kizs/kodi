@@ -15,11 +15,9 @@ import xbmcaddon
 import xbmcgui
 import xbmcplugin
 
-try:
-    from sqlite3 import dbapi2 as sqlite
-except:
-    from pysqlite2 import dbapi2 as sqlite
-
+import json
+from resources.lib.movie import movie
+from sets import Set
 
 dbProjectCompleted='ProjectCompleted'
 dbProjectActual='ProjectActual'
@@ -49,8 +47,7 @@ if (felhasznalo == "" or jelszo == "" or tmpDir == ""):
     addon.openSettings()
     sys.exit()
 
-dbConn = sqlite.connect(tmpDir + 'animeaddicts.db')
-
+movies = []
 
 def newSession():
     s = requests.Session()
@@ -105,11 +102,6 @@ def load(url, post = None, referer = None):
         'Referer': referer
     })     
 
-    #sys.stderr.write('Header start:')
-    #for key in session.headers.keys():
-    #    sys.stderr.write(key + ": " + session.headers.get(key, '***'))
-    #sys.stderr.write('Header end.')
-    
     r = ""
     try:
         if post:
@@ -176,6 +168,11 @@ def play_videourl(video_url, videoname, thumbnail, referedUrl):
     return
 
 def build_main_directory():
+    del movies[:]
+    update_movie_db(baseUrl + 'project.php?completed.jap', dbProjectCompleted)
+    update_movie_db(baseUrl + 'project.php?ongoing.jap', dbProjectActual)
+    fetch_movie_db()
+    
     localurl = sys.argv[0]+'?mode=changeDir&dirName=Befejezett'
     li = xbmcgui.ListItem('Befejezett')
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
@@ -205,8 +202,6 @@ def build_main_directory():
     return
 
 def build_sub_directory(subDir, category, animeUrl):
-    global dbConn
-
     hParser = HTMLParser.HTMLParser()
     
     if (subDir[0] == 'Hasonlo'):
@@ -343,99 +338,84 @@ def build_sub_directory(subDir, category, animeUrl):
         kb.doModal()
         if (kb.isConfirmed()):
             searchText = "%" + kb.getText() + "%"
-            
-            c = dbConn.cursor()
-            for row in c.execute("SELECT movieseries.movieseries_id, movieseries.name, url, genre, year, title, thumbnailurl FROM movieseries WHERE name like (?) ORDER BY name", (searchText.decode('utf-8'),)):
-                li = xbmcgui.ListItem(row[1], iconImage=baseUrl + row[6], thumbnailImage = baseUrl + row[6], )
-                info = {
-                    'genre': row[3],
-                    'year': row[4],
-                    'title': row[5],
-                }
-                li.setInfo('video', info)
-                li.setArt({'thumb': baseUrl + row[6], 'poster': baseUrl + row[6], 'fanart': baseUrl + row[6]})
-                xbmcplugin.addDirectoryItem(handle=addon_handle, url=sys.argv[0]+row[2], listitem=li, isFolder=True)
-            
+            for movie in movies:
+                if movie.name.find(searchText.decode('utf-8')) > 0:
+                    li = xbmcgui.ListItem(movie.name, iconImage=baseUrl + movie.thumbnailurl, thumbnailImage = baseUrl + movie.thumbnailurl, )
+                    info = {
+                        'genre': movie.genre,
+                        'year': movie.year,
+                        'title': movie.title,
+                    }
+                    li.setInfo('video', info)
+                    li.setArt({'thumb': baseUrl + movie.thumbnailurl, 'poster': baseUrl + movie.thumbnailurl, 'fanart': baseUrl + movie.thumbnailurl})
+                    xbmcplugin.addDirectoryItem(handle=addon_handle, url=sys.argv[0]+movie.url, listitem=li, isFolder=True)            
             xbmcplugin.endOfDirectory(addon_handle)
         return 
 
     if (subDir[0] == 'Kategoria'):
-        c = dbConn.cursor()
-        for row in c.execute("SELECT DISTINCT name FROM category ORDER BY name"):
-            localurl = sys.argv[0]+'?mode=changeDir&dirName=KategorianBelul&' + urllib.urlencode({'category' : row[0].encode('utf-8')}) 
-            li = xbmcgui.ListItem(row[0])
+        categories = Set()
+        for movie in movies:
+            for cat in movie.categories:
+                categories.add(cat)
+            
+        for cat in categories:
+            localurl = sys.argv[0]+'?mode=changeDir&dirName=KategorianBelul&' + urllib.urlencode({'category' : cat.encode('utf-8')}) 
+            li = xbmcgui.ListItem(cat)
             xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
     
         xbmcplugin.endOfDirectory(addon_handle)
         return 
 
     if (subDir[0] == 'KategorianBelul'):
-        c = dbConn.cursor()  #       0                           1                 2    3      4     5      6
-        for row in c.execute("SELECT movieseries.movieseries_id, movieseries.name, url, genre, year, title, thumbnailurl FROM movieseries JOIN category ON category.movieseries_id=movieseries.movieseries_id AND category.name=(?) ORDER BY movieseries.name", (category[0].decode('utf-8'),)):
-            li = xbmcgui.ListItem(row[1], iconImage=baseUrl + row[6], thumbnailImage = baseUrl + row[6], )
-            info = {
-                'genre': row[3],
-                'year': row[4],
-                'title': row[5],
-            }
-            li.setInfo('video', info)
-            li.setArt({'thumb': baseUrl + row[6], 'poster': baseUrl + row[6], 'fanart': baseUrl + row[6]})
-            xbmcplugin.addDirectoryItem(handle=addon_handle, url=sys.argv[0]+row[2], listitem=li, isFolder=True)
-            
+        for movie in movies:
+            for cat in movie.categories:
+                if cat == category[0].decode('utf-8'):
+                    li = xbmcgui.ListItem(movie.name, iconImage=baseUrl + movie.thumbnailurl, thumbnailImage = baseUrl + movie.thumbnailurl, )
+                    info = {
+                        'genre': movie.genre,
+                        'year': movie.year,
+                        'title': movie.title,
+                    }
+                    li.setInfo('video', info)
+                    li.setArt({'thumb': baseUrl + movie.thumbnailurl, 'poster': baseUrl + movie.thumbnailurl, 'fanart': baseUrl + movie.thumbnailurl})
+                    xbmcplugin.addDirectoryItem(handle=addon_handle, url=sys.argv[0]+movie.url, listitem=li, isFolder=True)            
         xbmcplugin.endOfDirectory(addon_handle)
         return
 
     if (subDir[0] == 'ClearDB'):
-        check_db()
-        c = dbConn.cursor()
-        c.execute('DELETE FROM category')
-        c.execute('DELETE FROM movieseries')
-        #c.execute('DELETE FROM mysequence')
-        #c.execute('INSERT INTO mysequence VALUES(0)')
-        try:
-            c.execute('CREATE INDEX movieseries_name ON movieseries(name)')
-        except:
-            sys.stderr.write('movieseries_name index már létezik')
-
-        try:
-            c.execute('CREATE INDEX category_movieseries_1 ON category (name, movieseries_id)')
-            c.execute('CREATE INDEX category_movieseries_2 ON category (name)')
-        except:
-            sys.stderr.write('category_movieseries index már létezik')
-
-        dbConn.commit()
         update_movie_db(baseUrl + 'project.php?completed.jap', dbProjectCompleted)
         update_movie_db(baseUrl + 'project.php?ongoing.jap', dbProjectActual)
+        fetch_movie_db()
         return
     
     if (subDir[0] == 'Befejezett'):
-        c = dbConn.cursor()
-        for row in c.execute("SELECT movieseries.movieseries_id, movieseries.name, url, genre, year, title, thumbnailurl FROM movieseries WHERE projectstatus = (?) ORDER BY name", (dbProjectCompleted.decode('utf-8'),)):
-            li = xbmcgui.ListItem(row[1], iconImage=baseUrl + row[6], thumbnailImage = baseUrl + row[6], )
-            info = {
-                'genre': row[3],
-                'year': row[4],
-                'title': row[5],
-            }
-            li.setInfo('video', info)
-            li.setArt({'thumb': baseUrl + row[6], 'poster': baseUrl + row[6], 'fanart': baseUrl + row[6]})
-            xbmcplugin.addDirectoryItem(handle=addon_handle, url=sys.argv[0]+row[2], listitem=li, isFolder=True)
+        for movie in movies:
+            if movie.projectstatus == dbProjectCompleted.decode('utf-8'):
+                li = xbmcgui.ListItem(movie.name, iconImage=baseUrl + movie.thumbnailurl, thumbnailImage = baseUrl + movie.thumbnailurl, )
+                info = {
+                    'genre': movie.genre,
+                    'year': movie.year,
+                    'title': movie.title,
+                }
+                li.setInfo('video', info)
+                li.setArt({'thumb': baseUrl + movie.thumbnailurl, 'poster': baseUrl + movie.thumbnailurl, 'fanart': baseUrl + movie.thumbnailurl})
+                xbmcplugin.addDirectoryItem(handle=addon_handle, url=sys.argv[0]+movie.url, listitem=li, isFolder=True)            
         
         xbmcplugin.endOfDirectory(addon_handle)
         return 
 
     if (subDir[0] == 'Aktualis'):
-        c = dbConn.cursor()
-        for row in c.execute("SELECT movieseries.movieseries_id, movieseries.name, url, genre, year, title, thumbnailurl FROM movieseries WHERE projectstatus = (?) ORDER BY name", (dbProjectActual.decode('utf-8'),)):
-            li = xbmcgui.ListItem(row[1], iconImage=baseUrl + row[6], thumbnailImage = baseUrl + row[6], )
-            info = {
-                'genre': row[3],
-                'year': row[4],
-                'title': row[5],
-            }
-            li.setInfo('video', info)
-            li.setArt({'thumb': baseUrl + row[6], 'poster': baseUrl + row[6], 'fanart': baseUrl + row[6]})
-            xbmcplugin.addDirectoryItem(handle=addon_handle, url=sys.argv[0]+row[2], listitem=li, isFolder=True)
+        for movie in movies:
+            if movie.projectstatus == dbProjectActual.decode('utf-8'):
+                li = xbmcgui.ListItem(movie.name, iconImage=baseUrl + movie.thumbnailurl, thumbnailImage = baseUrl + movie.thumbnailurl, )
+                info = {
+                    'genre': movie.genre,
+                    'year': movie.year,
+                    'title': movie.title,
+                }
+                li.setInfo('video', info)
+                li.setArt({'thumb': baseUrl + movie.thumbnailurl, 'poster': baseUrl + movie.thumbnailurl, 'fanart': baseUrl + movie.thumbnailurl})
+                xbmcplugin.addDirectoryItem(handle=addon_handle, url=sys.argv[0]+movie.url, listitem=li, isFolder=True)            
         
         xbmcplugin.endOfDirectory(addon_handle)
         return 
@@ -486,68 +466,8 @@ def build_url_sub_directory(urlToPlay):
     return
 
 
-def check_db():
-    global dbConn
-    dbversion = 0
-    
-    c = dbConn.cursor()
-    try:
-        c.execute('SELECT dbversion FROM version')
-        dbversion = c.fetchone()[0]
-    except:
-        c.execute('CREATE TABLE version(dbversion integer)')
-        c.execute('INSERT INTO version VALUES(1)')
-        try:
-            c.execute('DROP TABLE movieseries')
-        except:
-            sys.stderr.write('Első indulás')
-
-    
-    if (dbversion < 2):
-        try:
-            c.execute('DROP TABLE mysequence');
-            #c.execute('SELECT COUNT(*) FROM mysequence')
-        except:
-            pass
-            #c.execute('CREATE TABLE mysequence(number integer)')
-            #c.execute('INSERT INTO mysequence VALUES(0)')
-
-    if (dbversion < 2):
-        try:
-            c.execute('SELECT COUNT(*) FROM movieseries')
-            c.execute('DROP TABLE movieseries');
-            c.execute('CREATE TABLE movieseries(movieseries_id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, url TEXT, genre TEXT, year TEXT, title TEXT, thumbnailurl TEXT, projectstatus TEXT)')
-            c.execute('CREATE INDEX movieseries_name ON movieseries (name)')
-        except:
-            c.execute('CREATE TABLE movieseries(movieseries_id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, url TEXT, genre TEXT, year TEXT, title TEXT, thumbnailurl TEXT, projectstatus TEXT)')
-            c.execute('CREATE INDEX movieseries_name ON movieseries (name)')
-    
-
-    c.execute('DELETE FROM movieseries where projectstatus=(?)', (dbProjectActual,)) #Az aktuálisakat mindig frissítnei kell!
-
-    if (dbversion < 2):
-        try:
-            c.execute('SELECT COUNT(*) FROM category')
-            c.execute('DROP TABLE category');
-            c.execute('CREATE TABLE category(category_id INTEGER PRIMARY KEY AUTOINCREMENT, movieseries_id INTEGER, name TEXT)')
-            c.execute('CREATE INDEX category_movieseries_1 ON category (name, movieseries_id)')
-            c.execute('CREATE INDEX category_movieseries_2 ON category (name)')
-        except:
-            c.execute('CREATE TABLE category(category_id INTEGER PRIMARY KEY AUTOINCREMENT, movieseries_id INTEGER, name TEXT)')
-            c.execute('CREATE INDEX category_movieseries_1 ON category (name, movieseries_id)')
-            c.execute('CREATE INDEX category_movieseries_2 ON category (name)')
-        
-    c.close()
-    return
-
 def update_movie_db(url, projectStatus):
-    global dbConn
-    insertMovieRowNum = -1
-    insertMovieRows=[]
-    insertCategoryRowNum = -1
-    insertCategoryRows=[]
-
-    c = dbConn.cursor()
+    global movies
     
     url_content = load(url)
     completedList = re.compile("<h1><a href='(.*?)'>(.*?)</a></h1>.*?<img src='(.*?)'.*?<strong>(Frissítve|Befejezve):</strong>(.*?)<.*?<span style='font-size:10px;'>(.*?)<", re.MULTILINE|re.DOTALL).findall(url_content)
@@ -568,54 +488,32 @@ def update_movie_db(url, projectStatus):
             year = completedList[x][4].strip()[:4].decode('utf-8')
             thumburl = completedList[x][2]
             
-            c.execute("SELECT COUNT(*) FROM movieseries WHERE name=(?)", (name,))
-            number = c.fetchone()[0]
+            myMovie = movie(name, url, genre, year, '', thumburl, projectStatus) 
             
-            
-            if (number == 0):
-                insertMovieRowNum = insertMovieRowNum + 1
-                #movideID = getnewid_db()
-                #c.execute("INSERT INTO movieseries VALUES(?,?,?,?,?,?,?)", (movideID, name, url, genre, year, name, thumburl))
-
-                movie=[]
-                #movie.append(movideID)
-                movie.append(name)
-                movie.append(url)
-                movie.append(genre)
-                movie.append(year)
-                movie.append(name)
-                movie.append(thumburl)
-                movie.append(projectStatus)
-                c.execute("INSERT INTO movieseries(name, url, genre, year, title, thumbnailurl, projectstatus) VALUES(?,?,?,?,?,?,?)", movie)
-                insertMovieRows.append(movie)
-                
-                categories = genre.split(',')
-                if (len(categories) > 0):
-                    for y in range(0, len(categories)):
-                        category = categories[y].strip()
-                        if (len(category) > 0):
-                            insertCategoryRowNum = insertCategoryRowNum + 1
-                            category=[]
-                            #category.append(getnewid_db())
-                            c.execute("SELECT movieseries_id FROM movieseries WHERE url=?", (url, ))
-                            movideID = c.fetchone()[0]
-                            category.append(movideID)
-                            category.append(categories[y].strip())
-                            insertCategoryRows.append(category)
-                            #category(category_id integer, movieseries_id integer, name text)
-                            #c.execute("INSERT INTO category VALUES(?,?,?)", (getnewid_db(), movideID, categories[y].strip()))
-                            #c.execute("INSERT INTO category VALUES(?,?,?)", category)
-            
-    
-#    if (insertMovieRowNum > -1):
-#        c.executemany("INSERT INTO movieseries(name, url, genre, year, title, thumbnailurl, projectstatus) VALUES(?,?,?,?,?,?,?,?)", insertMovieRows)
-
-    if (insertCategoryRowNum > -1):
-        c.executemany("INSERT INTO category(movieseries_id, name) VALUES(?,?)", insertCategoryRows)
-    
-    c.close()
-    dbConn.commit()
+            categories = genre.split(',')
+            if (len(categories) > 0):
+                for y in range(0, len(categories)):
+                    category = categories[y].strip()
+                    if (len(category) > 0):
+                        myMovie.addCategory(category)
+                        
+            movies.append(myMovie)
     return
+
+def fetch_movie_db():
+    global movies
+
+    try:
+        os.remove(tmpDir + 'animeaddicts.db')
+    except:
+        pass
+    
+    try:
+        dbFile = open(tmpDir + 'animeaddicts.db', 'w')
+        pickle.dump(movies, dbFile)
+        dbFile.close()
+    except:
+        pass
 
 
 
@@ -625,9 +523,6 @@ addon_handle = int(sys.argv[1])
 args = urlparse.parse_qs(sys.argv[2][1:])
 
 xbmcplugin.setContent(addon_handle, 'movies')
-check_db()
-update_movie_db(baseUrl + 'project.php?completed.jap', dbProjectCompleted)
-update_movie_db(baseUrl + 'project.php?ongoing.jap', dbProjectActual)
 
 mode = args.get('mode', None)
 subDir = args.get('dirName', None)
@@ -637,6 +532,16 @@ referedUrl = args.get('referedUrl', None)
 videoName = args.get('videoName', None)
 videoThumbnail = args.get('videoThumbnail', None)
 
+try:
+    del movies[:]
+    dbFile = open(tmpDir + 'animeaddicts.db', 'r')
+    movies = pickle.load(dbFile)
+    dbFile.close()
+except:
+    update_movie_db(baseUrl + 'project.php?completed.jap', dbProjectCompleted)
+    update_movie_db(baseUrl + 'project.php?ongoing.jap', dbProjectActual)
+    fetch_movie_db()
+
 if mode is None:
     doLogin()
     build_main_directory()
@@ -644,13 +549,10 @@ elif mode[0] == 'changeDir':
     if (urlToPlay is None):
         build_sub_directory(subDir, category, '')
     else:
-        build_sub_directory(subDir, category, urlToPlay[0])
-        
+        build_sub_directory(subDir, category, urlToPlay[0])        
 elif mode[0] == 'listMovieParts':
     build_url_sub_directory(urlToPlay[0])
 elif mode[0] == 'openSetup':
     addon.openSettings()
 elif mode[0] == 'playUrl':
     play_videourl(urlToPlay[0], videoName[0], videoThumbnail[0], referedUrl[0])
-
-dbConn.close()
