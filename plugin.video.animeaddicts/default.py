@@ -16,7 +16,8 @@ import xbmcgui
 import xbmcplugin
 
 import json
-from resources.lib.movie import movie
+from resources.lib.moviedb import Moviedb
+from resources.lib.movie import Movie
 from sets import Set
 
 dbProjectCompleted='ProjectCompleted'
@@ -26,14 +27,9 @@ addon = xbmcaddon.Addon(id='plugin.video.animeaddicts')
 thisAddonDir = xbmc.translatePath(addon.getAddonInfo('path')).decode('utf-8')
 sys.path.append(os.path.join(thisAddonDir, 'resources', 'lib'))
 
-base_url = sys.argv[0]
-addon_handle = int(sys.argv[1])
-args = urlparse.parse_qs(sys.argv[2][1:])
-
 appName = 'Animeaddicts'
 logined = False
 
-xbmcplugin.setContent(addon_handle, 'movies')
 baseUrl = 'http://animeaddicts.hu/'
 
 felhasznalo = addon.getSetting('felhasznalonev')
@@ -46,8 +42,6 @@ if (felhasznalo == "" or jelszo == "" or tmpDir == ""):
     dialog.ok("Hiba!", "Nem végezted el a beállításokat!", "", "")
     addon.openSettings()
     sys.exit()
-
-movies = []
 
 def newSession():
     s = requests.Session()
@@ -168,11 +162,6 @@ def play_videourl(video_url, videoname, thumbnail, referedUrl):
     return
 
 def build_main_directory():
-    del movies[:]
-    update_movie_db(baseUrl + 'project.php?completed.jap', dbProjectCompleted)
-    update_movie_db(baseUrl + 'project.php?ongoing.jap', dbProjectActual)
-    fetch_movie_db()
-    
     localurl = sys.argv[0]+'?mode=changeDir&dirName=Befejezett'
     li = xbmcgui.ListItem('Befejezett')
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
@@ -202,6 +191,8 @@ def build_main_directory():
     return
 
 def build_sub_directory(subDir, category, animeUrl):
+    global myMoviedb
+    
     hParser = HTMLParser.HTMLParser()
     
     if (subDir[0] == 'Hasonlo'):
@@ -338,7 +329,7 @@ def build_sub_directory(subDir, category, animeUrl):
         kb.doModal()
         if (kb.isConfirmed()):
             searchText = "%" + kb.getText() + "%"
-            for movie in movies:
+            for movie in myMoviedb.movies:
                 if movie.name.find(searchText.decode('utf-8')) > 0:
                     li = xbmcgui.ListItem(movie.name, iconImage=baseUrl + movie.thumbnailurl, thumbnailImage = baseUrl + movie.thumbnailurl, )
                     info = {
@@ -354,10 +345,12 @@ def build_sub_directory(subDir, category, animeUrl):
 
     if (subDir[0] == 'Kategoria'):
         categories = Set()
-        for movie in movies:
+        for movie in myMoviedb.movies:
             for cat in movie.categories:
                 categories.add(cat)
-            
+        
+        categories = sorted(categories)
+        
         for cat in categories:
             localurl = sys.argv[0]+'?mode=changeDir&dirName=KategorianBelul&' + urllib.urlencode({'category' : cat.encode('utf-8')}) 
             li = xbmcgui.ListItem(cat)
@@ -367,7 +360,7 @@ def build_sub_directory(subDir, category, animeUrl):
         return 
 
     if (subDir[0] == 'KategorianBelul'):
-        for movie in movies:
+        for movie in myMoviedb.movies:
             for cat in movie.categories:
                 if cat == category[0].decode('utf-8'):
                     li = xbmcgui.ListItem(movie.name, iconImage=baseUrl + movie.thumbnailurl, thumbnailImage = baseUrl + movie.thumbnailurl, )
@@ -383,13 +376,14 @@ def build_sub_directory(subDir, category, animeUrl):
         return
 
     if (subDir[0] == 'ClearDB'):
+        myMoviedb = Moviedb()    
         update_movie_db(baseUrl + 'project.php?completed.jap', dbProjectCompleted)
         update_movie_db(baseUrl + 'project.php?ongoing.jap', dbProjectActual)
         fetch_movie_db()
         return
     
     if (subDir[0] == 'Befejezett'):
-        for movie in movies:
+        for movie in myMoviedb.movies:
             if movie.projectstatus == dbProjectCompleted.decode('utf-8'):
                 li = xbmcgui.ListItem(movie.name, iconImage=baseUrl + movie.thumbnailurl, thumbnailImage = baseUrl + movie.thumbnailurl, )
                 info = {
@@ -405,7 +399,7 @@ def build_sub_directory(subDir, category, animeUrl):
         return 
 
     if (subDir[0] == 'Aktualis'):
-        for movie in movies:
+        for movie in myMoviedb.movies:
             if movie.projectstatus == dbProjectActual.decode('utf-8'):
                 li = xbmcgui.ListItem(movie.name, iconImage=baseUrl + movie.thumbnailurl, thumbnailImage = baseUrl + movie.thumbnailurl, )
                 info = {
@@ -467,7 +461,7 @@ def build_url_sub_directory(urlToPlay):
 
 
 def update_movie_db(url, projectStatus):
-    global movies
+    global myMoviedb
     
     url_content = load(url)
     completedList = re.compile("<h1><a href='(.*?)'>(.*?)</a></h1>.*?<img src='(.*?)'.*?<strong>(Frissítve|Befejezve):</strong>(.*?)<.*?<span style='font-size:10px;'>(.*?)<", re.MULTILINE|re.DOTALL).findall(url_content)
@@ -488,7 +482,7 @@ def update_movie_db(url, projectStatus):
             year = completedList[x][4].strip()[:4].decode('utf-8')
             thumburl = completedList[x][2]
             
-            myMovie = movie(name, url, genre, year, '', thumburl, projectStatus) 
+            myMovie = Movie(name, url, genre, year, '', thumburl, projectStatus) 
             
             categories = genre.split(',')
             if (len(categories) > 0):
@@ -497,11 +491,13 @@ def update_movie_db(url, projectStatus):
                     if (len(category) > 0):
                         myMovie.addCategory(category)
                         
-            movies.append(myMovie)
+            myMoviedb.addMovie(myMovie)
     return
 
 def fetch_movie_db():
-    global movies
+    global myMoviedb
+
+    sys.stderr.write('Refresh animeaddicts database...')
 
     try:
         os.remove(tmpDir + 'animeaddicts.db')
@@ -510,7 +506,7 @@ def fetch_movie_db():
     
     try:
         dbFile = open(tmpDir + 'animeaddicts.db', 'w')
-        pickle.dump(movies, dbFile)
+        pickle.dump(myMoviedb, dbFile)
         dbFile.close()
     except:
         pass
@@ -532,12 +528,17 @@ referedUrl = args.get('referedUrl', None)
 videoName = args.get('videoName', None)
 videoThumbnail = args.get('videoThumbnail', None)
 
+myMoviedb = Moviedb()
 try:
-    del movies[:]
     dbFile = open(tmpDir + 'animeaddicts.db', 'r')
-    movies = pickle.load(dbFile)
+    myMoviedb = pickle.load(dbFile)
     dbFile.close()
 except:
+    pass
+
+
+if myMoviedb.isSyncNeed():
+    myMoviedb = Moviedb()    
     update_movie_db(baseUrl + 'project.php?completed.jap', dbProjectCompleted)
     update_movie_db(baseUrl + 'project.php?ongoing.jap', dbProjectActual)
     fetch_movie_db()

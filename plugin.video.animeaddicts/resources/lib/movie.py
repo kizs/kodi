@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*- 
 
-class movie:
+class Movie:
     def __init__(self, name, url, genre, year, title, thumbnailurl, projectstatus):
         self.name = name
         self.url = url

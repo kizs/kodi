@@ -1,5 +1,8 @@
+V.1.4.1
+- Két automatikus adatbázis frissítés között minimum 3 percenek el kell telnie (csökkentve az animeaddicts.hu terheltségét).
+
 V.1.4.0
-- Saját adatbázis használat SQLite helyett (andoridos Kodi 17 miatt)
+- Saját adatbázis használat SQLite helyett (androidos Kodi 17 miatt)
 
 V.1.3.5
 - Kodi 17 kompatibilitás

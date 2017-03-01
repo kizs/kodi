@@ -6,6 +6,7 @@ import json
 import re
 import requests, requests.utils
 import pickle
+from time import sleep
 
 
 torrentPath = "/home/kizs/tmp/"
@@ -156,5 +157,17 @@ def getTorrentFileStatus(torrent_file):
 
 #torrentFileContent = open("/home/kizs/mytorrent.torrent")
 #getTorrentFiles(torrentFileContent)
-sys.stderr.write(str(getTorrentFileStatus("jack.reacher.never.go.back.bdrip-trinity.mkv")[1]))
+#sys.stderr.write(str(getTorrentFileStatus("jack.reacher.never.go.back.bdrip-trinity.mkv")[1]))
 #torrentFileContent.close()
+
+import datetime
+
+lastSyncTime = datetime.datetime.now()
+sleep(73)
+bTime =  datetime.datetime.now()
+
+c = bTime - lastSyncTime
+sys.stderr.write(str(c.seconds))
+
+
+ 
