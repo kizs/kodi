@@ -161,8 +161,9 @@ def load(url, post = None):
 def build_torrent_sub_directory(video_url, videoname):
     video_url = base64.b64decode(video_url)
     #sys.stderr.write('build_torrent_sub_directory: ' + video_url)
-    video_url = video_url.replace('action=details', 'action=download')
-    video_url = video_url.replace('https', 'http')
+    content = load(video_url);
+    video_urls = re.compile('href="(.*?)">Torrent letöltése</a>', re.MULTILINE).findall(content)
+    video_url = baseUrl + "/" + video_urls[0] #.replace('action=details', 'action=download')
     #sys.stderr.write('torrent file url: ' + video_url)
     
     torrentData = load(video_url)

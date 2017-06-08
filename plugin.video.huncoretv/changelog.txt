@@ -1,3 +1,6 @@
+V2.0.3
+- megváltozott html lekövetése 
+
 V1.5
 - hibajavítások
 

@@ -159,11 +159,14 @@ def load(url, post = None):
 def build_torrent_sub_directory(video_url, videoname):
     video_url = base64.b64decode(video_url)
     #sys.stderr.write('build_torrent_sub_directory: ' + video_url)
-    video_url = video_url.replace('action=details', 'action=download')
-    video_url = video_url.replace('https', 'http')
-    #sys.stderr.write('torrent file url: ' + video_url)
-    
+#    sys.stderr.write(video_url)
+    content = load(video_url);
+    video_urls = re.compile('href="(.*?)">Torrent letöltése</a>', re.MULTILINE).findall(content)
+    video_url = baseUrl + "/" + video_urls[0] #.replace('action=details', 'action=download')
+    #sys.stderr.write(video_url)
     torrentData = load(video_url)
+#    sys.stderr.write(torrentData)
+    
     content = session.get(video_url, stream=True)
     content.raw.decode_content = True
     
@@ -262,6 +265,8 @@ def build_sub_directory(subDir, tag):
 
                 localurl = sys.argv[0]+'?mode=listTorrent&videoName=' + ajanloList[x][2] + '&movieURL=' + base64.b64encode(hParser.unescape(baseUrl + "/" + ajanloList[x][0]))
                 li = xbmcgui.ListItem(ajanloList[x][2].decode('utf-8'), thumbnailImage=torrentPath + "/" + ajanloList[x][2] + ".png")
+                #sys.stderr.write(ajanloList[x][2])         
+                #sys.stderr.write(baseUrl + "/" + ajanloList[x][0])         
                 xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
         xbmcplugin.endOfDirectory(addon_handle)
 
@@ -379,14 +384,18 @@ def tokenize(text, match=re.compile("([idel])|(\d+):|(-?\d+)").match):
 
 def decode_item(next, token):
     if token == "i":
+        sys.stderr.write('!!! token == "i" !!!')
         # integer: "i" value "e"
         data = int(next())
         if next() != "e":
+            sys.stderr.write('!!! ValueError - 1 !!!')
             raise ValueError
     elif token == "s":
+        sys.stderr.write('!!! token == "s" !!!')
         # string: "s" value (virtual tokens)
         data = next()
     elif token == "l" or token == "d":
+        sys.stderr.write('!!! token == "l" or "d" !!!')
         # container: "l" (or "d") values "e"
         data = []
         tok = next()
@@ -396,13 +405,19 @@ def decode_item(next, token):
         if token == "d":
             data = dict(zip(data[0::2], data[1::2]))
     else:
+        sys.stderr.write('!!! ValueError - 2 !!!')
         raise ValueError
     return data
 
 def decodeTorrent(text):
     try:
+        #sys.stderr.write(text)
+
+        sys.stderr.write('!!! tokenize(text) !!!')
         src = tokenize(text)
+        sys.stderr.write('!!! decode_item(src.next, src.next()) !!!')
         data = decode_item(src.next, src.next())
+        sys.stderr.write('!!! for token in src !!!')
         for token in src: # look for more tokens
             raise SyntaxError("trailing junk")
     except (AttributeError, ValueError, StopIteration):
