@@ -1,3 +1,6 @@
+V.1.4.3
+- Keresés javítása.
+
 V.1.4.2
 - Keresés javítása.
 

@@ -330,7 +330,7 @@ def build_sub_directory(subDir, category, animeUrl):
         if (kb.isConfirmed()):
             searchText = kb.getText()
             for movie in myMoviedb.movies:
-                if movie.name.find(searchText.decode('utf-8')) > 0:
+                if re.search(searchText.decode('utf-8'), movie.name, re.IGNORECASE):
                     li = xbmcgui.ListItem(movie.name, iconImage=baseUrl + movie.thumbnailurl, thumbnailImage = baseUrl + movie.thumbnailurl, )
                     info = {
                         'genre': movie.genre,
