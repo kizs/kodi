@@ -1,3 +1,6 @@
+V.1.4.2
+- Keresés javítása.
+
 V.1.4.1
 - Két automatikus adatbázis frissítés között minimum 3 percenek el kell telnie (csökkentve az animeaddicts.hu terheltségét).
 

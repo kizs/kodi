@@ -1,1 +1,3 @@
-# Ezzel megy csak.
+__all__ = ['torrentparse']
+
+from torrentparse import *

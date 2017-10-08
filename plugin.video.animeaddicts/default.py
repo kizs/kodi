@@ -328,7 +328,7 @@ def build_sub_directory(subDir, category, animeUrl):
         kb=xbmc.Keyboard('', 'Keresés', False)
         kb.doModal()
         if (kb.isConfirmed()):
-            searchText = "%" + kb.getText() + "%"
+            searchText = kb.getText()
             for movie in myMoviedb.movies:
                 if movie.name.find(searchText.decode('utf-8')) > 0:
                     li = xbmcgui.ListItem(movie.name, iconImage=baseUrl + movie.thumbnailurl, thumbnailImage = baseUrl + movie.thumbnailurl, )
@@ -464,7 +464,7 @@ def update_movie_db(url, projectStatus):
     global myMoviedb
     
     url_content = load(url)
-    completedList = re.compile("<h1><a href='(.*?)'>(.*?)</a></h1>.*?<img src='(.*?)'.*?<strong>(Frissítve|Befejezve):</strong>(.*?)<.*?<span style='font-size:10px;'>(.*?)<", re.MULTILINE|re.DOTALL).findall(url_content)
+    completedList = re.compile("<h1><a href='(.*?)'>(.*?)</a></h1>.*?<img src='(.*?)'.*?<strong>(Frissítve|Befejezve):</strong>(.*?)<.*?<span style='font-size:.*?;'>(.*?)<", re.MULTILINE|re.DOTALL).findall(url_content)
     hParser = HTMLParser.HTMLParser()
         
     if (len(completedList) > 0):

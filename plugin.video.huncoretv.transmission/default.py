@@ -20,6 +20,7 @@ import sys
 import json
 import re
 
+from resources.lib.torrentparse import TorrentParser
 
 addon = xbmcaddon.Addon(id='plugin.video.huncoretv.transmission')
 thisAddonDir = xbmc.translatePath(addon.getAddonInfo('path')).decode('utf-8')
@@ -112,7 +113,6 @@ session = newSession()
 def doLogin():
     global session
     if os.path.isfile(torrentPath + 'my.cookies'): 
-        #sys.stderr.write("load Session")
         cookieFile = open(torrentPath + 'my.cookies')
         cookies = requests.utils.cookiejar_from_dict(pickle.load(cookieFile))
         session.cookies = cookies
@@ -120,7 +120,6 @@ def doLogin():
     if felhasznalo != "":
         response = session.get(baseUrl + '/profile.php')
         if (felhasznalo + ' profilja') not in response.content:
-            #sys.stderr.write("doLogin")
             payload = {'nev': felhasznalo, 'pass': jelszo, 'ne_leptessen_ki' : True}
             session.post(baseUrl + '/login.php',data = payload)
             response = session.get(baseUrl + '/profile.php')
@@ -158,14 +157,10 @@ def load(url, post = None):
 
 def build_torrent_sub_directory(video_url, videoname):
     video_url = base64.b64decode(video_url)
-    #sys.stderr.write('build_torrent_sub_directory: ' + video_url)
-#    sys.stderr.write(video_url)
     content = load(video_url);
     video_urls = re.compile('href="(.*?)">Torrent letöltése</a>', re.MULTILINE).findall(content)
     video_url = baseUrl + "/" + video_urls[0] #.replace('action=details', 'action=download')
-    #sys.stderr.write(video_url)
     torrentData = load(video_url)
-#    sys.stderr.write(torrentData)
     
     content = session.get(video_url, stream=True)
     content.raw.decode_content = True
@@ -174,15 +169,12 @@ def build_torrent_sub_directory(video_url, videoname):
     shutil.copyfileobj(content.raw, output) 
     output.close()
 
-    torrentFileContent = open(torrentPath + 'mytorrent.torrent')
-    paths = getTorrentFiles(torrentFileContent)
-    torrentFileContent.close();
+    paths = getTorrentFiles(torrentPath + 'mytorrent.torrent')
 
     for x in range(0, len(paths)):
         file_entry = paths[x]
         localurl = sys.argv[0]+'?mode=playTorrent&videoName=' + videoname + '&movieURL=' + video_url + '&fileToPlay=' + file_entry
         li = xbmcgui.ListItem(os.path.basename(file_entry).decode('utf-8'))
-        #sys.stderr.write('file_entry.path: ' + file_entry.path)
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=False)
         
     xbmcplugin.endOfDirectory(addon_handle)
@@ -214,7 +206,6 @@ def build_kereso_to_subdir(keresoUrl):
         if (kb.isConfirmed()):
             searchText = kb.getText()
             searchText = urllib.quote_plus(searchText)
-            #sys.stderr.write('kereő URL: ' + baseUrl + keresoUrl + '&mire=' + searchText)
             url_content = load(baseUrl + keresoUrl + '&mire=' + searchText.replace(' ', '+'))
         else:
             return
@@ -226,7 +217,6 @@ def build_kereso_to_subdir(keresoUrl):
     hParser = HTMLParser.HTMLParser()
     if (len(torrentURL) > 0):
         for x in range(0, len(torrentURL)):
-            #sys.stderr.write('torrentURL[x]: ' + torrentURL[x])
             egyTorrent = re.compile('href="torrents.php.*?id=(.*?)" onclick.*?title="(.*?)".*?mutat\(\'(.*?)\'.*?class="box_meret2">(.*?)<', re.MULTILINE | re.DOTALL).findall(torrentURL[x])
             if (len(egyTorrent) > 0):
                 localurl = sys.argv[0]+'?mode=listTorrent&videoName=' + egyTorrent[0][1] + '&movieURL=' + base64.b64encode(hParser.unescape(baseUrl + "/torrents.php?action=details&id=" + egyTorrent[0][0]))
@@ -260,13 +250,10 @@ def build_sub_directory(subDir, tag):
 
         if (len(ajanloList) > 0):
             for x in range(0, len(ajanloList)):
-                #sys.stderr.write("thumbnailImage: " + torrentPath + "/" + ajanloList[x][2] + ".png")
                 urllib.urlretrieve(ajanloList[x][1], torrentPath + "/" + ajanloList[x][2] + ".png")
 
                 localurl = sys.argv[0]+'?mode=listTorrent&videoName=' + ajanloList[x][2] + '&movieURL=' + base64.b64encode(hParser.unescape(baseUrl + "/" + ajanloList[x][0]))
                 li = xbmcgui.ListItem(ajanloList[x][2].decode('utf-8'), thumbnailImage=torrentPath + "/" + ajanloList[x][2] + ".png")
-                #sys.stderr.write(ajanloList[x][2])         
-                #sys.stderr.write(baseUrl + "/" + ajanloList[x][0])         
                 xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
         xbmcplugin.endOfDirectory(addon_handle)
 
@@ -277,7 +264,6 @@ def build_sub_directory(subDir, tag):
 
         if (len(ajanloList) > 0):
             for x in range(0, len(ajanloList)):
-                #sys.stderr.write("thumbnailImage: " + torrentPath + "/" + ajanloList[x][2] + ".png")
                 urllib.urlretrieve(ajanloList[x][1], torrentPath + "/" + ajanloList[x][2] + ".png")
 
                 localurl = sys.argv[0]+'?mode=listTorrent&videoName=' + ajanloList[x][2] + '&movieURL=' + base64.b64encode(hParser.unescape(baseUrl + "/" + ajanloList[x][0]))
@@ -369,72 +355,15 @@ def build_sub_directory(subDir, tag):
 
     return
 
-def tokenize(text, match=re.compile("([idel])|(\d+):|(-?\d+)").match):
-    i = 0
-    while i < len(text):
-        m = match(text, i)
-        s = m.group(m.lastindex)
-        i = m.end()
-        if m.lastindex == 2:
-            yield "s"
-            yield text[i:i+int(s)]
-            i = i + int(s)
-        else:
-            yield s
-
-def decode_item(next, token):
-    if token == "i":
-        sys.stderr.write('!!! token == "i" !!!')
-        # integer: "i" value "e"
-        data = int(next())
-        if next() != "e":
-            sys.stderr.write('!!! ValueError - 1 !!!')
-            raise ValueError
-    elif token == "s":
-        sys.stderr.write('!!! token == "s" !!!')
-        # string: "s" value (virtual tokens)
-        data = next()
-    elif token == "l" or token == "d":
-        sys.stderr.write('!!! token == "l" or "d" !!!')
-        # container: "l" (or "d") values "e"
-        data = []
-        tok = next()
-        while tok != "e":
-            data.append(decode_item(next, tok))
-            tok = next()
-        if token == "d":
-            data = dict(zip(data[0::2], data[1::2]))
-    else:
-        sys.stderr.write('!!! ValueError - 2 !!!')
-        raise ValueError
-    return data
-
 def decodeTorrent(text):
-    try:
-        #sys.stderr.write(text)
-
-        sys.stderr.write('!!! tokenize(text) !!!')
-        src = tokenize(text)
-        sys.stderr.write('!!! decode_item(src.next, src.next()) !!!')
-        data = decode_item(src.next, src.next())
-        sys.stderr.write('!!! for token in src !!!')
-        for token in src: # look for more tokens
-            raise SyntaxError("trailing junk")
-    except (AttributeError, ValueError, StopIteration):
-        raise SyntaxError("syntax error")
+    data = TorrentParser(text)
     return data
 
-def getTorrentFiles(torrentFileContent):
+def getTorrentFiles(torrentFile):
     filePaths = []
-    eredmeny = decodeTorrent(torrentFileContent.read())
-    if "files" in eredmeny["info"]:
-        for x in range (0, len(eredmeny["info"]["files"])):
-            filePath = ""
-            for y in range (0, len(eredmeny["info"]["files"][x]["path"])):
-                filePath = filePath + eredmeny["info"]["files"][x]["path"][y] + "/"
-            filePaths.append(filePath[0:len(filePath)-1]);
-    if eredmeny["info"]["name"]:
-        filePaths.append(eredmeny["info"]["name"]);
+    eredmeny = decodeTorrent(torrentFile).get_files_details()
+    for x in range (0, len(eredmeny)):
+        filePaths.append(eredmeny[x][0]);
     
     return filePaths
 
@@ -481,12 +410,12 @@ def getTorrentFileStatus(torrent_file):
 
     return retVal
 
-def play_torrenturl(fileToPlay, blob, thumbnail):
+def play_torrenturl(fileToPlay, torrentfile, thumbnail):
     try:
-        torrentName = decodeTorrent(blob)["info"]["name"]
-        #torrentFileContent = open(torrentPath + 'mytorrent.torrent', 'rb')
-        torrent_content = base64.b64encode(blob)
-        #torrentFileContent.close()
+        torrentName = decodeTorrent(torrentfile).parsed_content.get('info').get('name')
+        torrentFileContent = open(torrentfile, 'rb')
+        torrent_content = base64.b64encode(torrentFileContent.read())
+        torrentFileContent.close()
         
         if len(transmission_username) > 0:
             sessionid_request = requests.get(transmission_url, auth=(transmission_username, transmission_password), verify=False)
@@ -509,9 +438,7 @@ def play_torrenturl(fileToPlay, blob, thumbnail):
         return
     
     fullName = torrentName + "/" + fileToPlay
-    sys.stderr.write('getTorrentFileStatus ' + torrentName + "/" + fileToPlay + '\n')
-    download_percent = getTorrentFileStatus(fullName.encode("utf-8"))[1]
-    sys.stderr.write('download_percent ' + str(download_percent) + '\n')
+    download_percent = getTorrentFileStatus(fullName)[1]
     xbmc.Player().stop()
     progress = xbmcgui.DialogProgress()
     progress.create('Progress: ' + fileToPlay)
@@ -527,7 +454,7 @@ def play_torrenturl(fileToPlay, blob, thumbnail):
 
     progress.close()
     if (download_percent >= 100):
-        sys.stderr.write('Playing ' + transmissionPath + '/' + torrentName + "/" + fileToPlay + '\n')
+        #sys.stderr.write('Playing ' + transmissionPath + '/' + torrentName + "/" + fileToPlay + '\n')
         play_torrent(torrentName, thumbnail, transmissionPath + '/' + torrentName + "/" + fileToPlay)
     return
 
@@ -555,16 +482,11 @@ thumbnail = args.get('thumbnail', None)
 stype = args.get('stype', None)
 
 if mode is None:
-    ##sys.stderr.write('mode: NONE \n')
     build_main_directory()
 elif mode[0] == 'changeDir':
-    ##sys.stderr.write('mode: ' + mode[0] + ', subDir: ' + subDir[0] + '\n')
     build_sub_directory(subDir, tag)
 elif mode[0] == 'playTorrent':
-    f = open(torrentPath + 'mytorrent.torrent', 'rb')
-    blob = f.read()
-    f.close()
-    play_torrenturl(fileToPlay[0], blob, None)
+    play_torrenturl(fileToPlay[0], torrentPath + 'mytorrent.torrent', None)
 elif mode[0] == 'listTorrent':
     build_torrent_sub_directory(movieURL[0], videoName[0])
 elif mode[0] == 'openSetup':
