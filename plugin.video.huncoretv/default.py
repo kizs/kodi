@@ -58,6 +58,9 @@ if (felhasznalo == "" or jelszo == "" or torrentPath == ""):
     dialog.ok("Hiba!", "Nem végezted el a beállításokat!", "", "")
     addon.openSettings()
     sys.exit()
+    
+if tmpTorrentTorlesido == 0:
+    tmpTorrentTorlesido = 9999
 
 transmission_send = addon.getSetting('send_to_transmission')
 transmission_url = addon.getSetting('transmission_url')
