@@ -61,8 +61,11 @@ session = newSession()
 
 def doLogin():
     global session
+    #postdata = {'login_name':addon.getSetting('felhasznalonev'),
+    #            'login_submit':'BELÉPÉS',
+    #            'login_password':addon.getSetting('jelszo')
+    #            }
     postdata = {'login_name':addon.getSetting('felhasznalonev'),
-                'login_submit':'BELÉPÉS',
                 'login_password':addon.getSetting('jelszo')
                 }
 
@@ -71,9 +74,10 @@ def doLogin():
     sikeres = re.compile("vagy jelentkezz be", re.MULTILINE|re.DOTALL).findall(content.encode('utf-8'))
     if (len(sikeres) > 0):
         content = session.post(baseUrl + 'log.php?login', data=postdata).text
+        content = session.post(baseUrl + 'project.php?ongoing').text
 
-        sikeres = re.compile("Bejelentkezve", re.MULTILINE|re.DOTALL).findall(content.encode('utf-8'))
-        if (len(sikeres) == 0):
+        sikeres = re.compile("vagy jelentkezz be", re.MULTILINE|re.DOTALL).findall(content.encode('utf-8'))
+        if (len(sikeres) > 0):
             logined = False
             dialog = xbmcgui.Dialog()
             dialog.ok("Hiba!", "Helytelen felhasználónév, vagy jelszó!", "Esetleg megjelent az I'm not a robot captcha.", "Várj egy ideig, esetleg próbáld meg böngészőből!")

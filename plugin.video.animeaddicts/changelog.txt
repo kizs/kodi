@@ -1,3 +1,6 @@
+V.1.4.4
+- Bejelentkezés javítása.
+
 V.1.4.3
 - Keresés javítása.
 
